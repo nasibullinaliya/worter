@@ -4,7 +4,7 @@ import { getAllWords } from '../api/progress'
 import { QuizRunner } from '../components/QuizRunner'
 import { Layout } from '../components/Layout'
 import { useLang } from '../context/LangContext'
-import type { Direction, TestWord } from '../utils/testEngine'
+import type { TestWord } from '../utils/testEngine'
 
 interface SetInfo {
   setId: string
