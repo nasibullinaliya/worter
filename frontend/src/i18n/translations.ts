@@ -335,11 +335,11 @@ const T = {
     'test.term': 'Word',
 
     // quiz
-    'quiz.title': 'Quiz',
+    'quiz.title': 'Test',
     'quiz.mode': 'Mode',
     'quiz.modeType': 'Type answer',
     'quiz.modeChoice': 'Multiple choice',
-    'quiz.startBtn': 'Start quiz',
+    'quiz.startBtn': 'Start test',
     'quiz.checkBtn': 'Check',
     'quiz.yourAnswer': 'Your answer',
     'quiz.results': 'Results',
@@ -350,7 +350,7 @@ const T = {
     'quiz.noMistakes': 'All answers correct! 🎉',
     'quiz.wordCount': 'Word count',
     'quiz.wordCountAll': 'All',
-    'quiz.quizBtn': 'Quiz',
+    'quiz.quizBtn': 'Test',
 
     'reminder.timeToReview': 'Time to review:',
   },
@@ -507,11 +507,11 @@ const T = {
     'test.term': 'Wort',
 
     // quiz
-    'quiz.title': 'Quiz',
+    'quiz.title': 'Test',
     'quiz.mode': 'Modus',
     'quiz.modeType': 'Antwort eingeben',
     'quiz.modeChoice': 'Multiple Choice',
-    'quiz.startBtn': 'Quiz starten',
+    'quiz.startBtn': 'Test starten',
     'quiz.checkBtn': 'Prüfen',
     'quiz.yourAnswer': 'Ihre Antwort',
     'quiz.results': 'Ergebnisse',
@@ -522,7 +522,7 @@ const T = {
     'quiz.noMistakes': 'Alle Antworten richtig! 🎉',
     'quiz.wordCount': 'Anzahl Wörter',
     'quiz.wordCountAll': 'Alle',
-    'quiz.quizBtn': 'Quiz',
+    'quiz.quizBtn': 'Test',
 
     'reminder.timeToReview': 'Zeit zum Wiederholen:',
   },
