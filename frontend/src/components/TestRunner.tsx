@@ -161,17 +161,14 @@ export function TestRunner({
     return () => window.removeEventListener('keydown', handler)
   }, [screen, current?.phase, choiceSelected, waitForNext, currentChoices])
 
-  // ── Keyboard: any key advances after a type-phase wrong answer ────────────────
+  // ── Focus "Next" button when wrong type answer is shown ──────────────────────
+  const nextAfterWrongRef = useRef<HTMLButtonElement>(null)
   useEffect(() => {
-    if (screen !== 'running' || current?.phase !== 'type' || !waitForNext) return
-    const handler = (e: KeyboardEvent) => {
-      // Ignore modifier-only keys
-      if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab'].includes(e.key)) return
-      handleNext()
+    if (waitForNext && current?.phase === 'type') {
+      const id = setTimeout(() => nextAfterWrongRef.current?.focus(), 50)
+      return () => clearTimeout(id)
     }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [screen, current?.phase, waitForNext, pendingCarry])
+  }, [waitForNext, current?.phase])
 
   // ── Core advance ──────────────────────────────────────────────────────────────
   /**
@@ -350,8 +347,8 @@ export function TestRunner({
           </span>
         </div>
 
-        {/* Progress bar */}
-        <ProgressBar known={doneIds.size} total={total} className="mb-6" />
+        {/* Progress bar — same 2-step formula as running screen */}
+        <ProgressBar known={choicePassedIds.size + doneIds.size} total={total * 2} className="mb-6" />
 
         {/* Word list */}
         <div className="mb-6 overflow-hidden rounded-xl border bg-white shadow-sm">
@@ -578,7 +575,14 @@ export function TestRunner({
               </div>
 
               <button
+                ref={nextAfterWrongRef}
                 onClick={handleNext}
+                onKeyDown={(e) => {
+                  if (!['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab'].includes(e.key)) {
+                    e.preventDefault()
+                    handleNext()
+                  }
+                }}
                 className="w-full rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700"
               >
                 {t('test.next')}
