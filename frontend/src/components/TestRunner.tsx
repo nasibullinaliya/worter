@@ -161,14 +161,31 @@ export function TestRunner({
     return () => window.removeEventListener('keydown', handler)
   }, [screen, current?.phase, choiceSelected, waitForNext, currentChoices])
 
-  // ── Focus "Next" button when wrong type answer is shown ──────────────────────
+  // ── Focus "Next" button when wrong answer is shown (choice or type phase) ─────
   const nextAfterWrongRef = useRef<HTMLButtonElement>(null)
+  const nextAfterWrongChoiceRef = useRef<HTMLButtonElement>(null)
+  const continueStageRef = useRef<HTMLButtonElement>(null)
+
   useEffect(() => {
     if (waitForNext && current?.phase === 'type') {
       const id = setTimeout(() => nextAfterWrongRef.current?.focus(), 50)
       return () => clearTimeout(id)
     }
   }, [waitForNext, current?.phase])
+
+  useEffect(() => {
+    if (waitForNext && current?.phase === 'choice') {
+      const id = setTimeout(() => nextAfterWrongChoiceRef.current?.focus(), 50)
+      return () => clearTimeout(id)
+    }
+  }, [waitForNext, current?.phase])
+
+  useEffect(() => {
+    if (screen === 'stage-review') {
+      const id = setTimeout(() => continueStageRef.current?.focus(), 50)
+      return () => clearTimeout(id)
+    }
+  }, [screen])
 
   // ── Core advance ──────────────────────────────────────────────────────────────
   /**
@@ -379,7 +396,14 @@ export function TestRunner({
         </div>
 
         <button
+          ref={continueStageRef}
           onClick={continueToNextStage}
+          onKeyDown={(e) => {
+            if (!['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab'].includes(e.key)) {
+              e.preventDefault()
+              continueToNextStage()
+            }
+          }}
           className="w-full rounded-lg bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700"
         >
           {hasMoreStages ? t('test.continueNext') : t('test.finish')}
@@ -536,7 +560,14 @@ export function TestRunner({
 
           {waitForNext && (
             <button
+              ref={nextAfterWrongChoiceRef}
               onClick={handleNext}
+              onKeyDown={(e) => {
+                if (!['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab'].includes(e.key)) {
+                  e.preventDefault()
+                  handleNext()
+                }
+              }}
               className="mt-2 w-full rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700"
             >
               {t('test.next')}
