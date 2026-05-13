@@ -11,6 +11,7 @@ import SetDetail from './pages/SetDetail'
 import SetEdit from './pages/SetEdit'
 import Flashcards from './pages/Flashcards'
 import Test from './pages/Test'
+import Quiz from './pages/Quiz'
 import TestAll from './pages/TestAll'
 import Explore from './pages/Explore'
 
@@ -31,6 +32,7 @@ export default function App() {
             <Route path="/sets/:id/edit" element={<ProtectedRoute><SetEdit /></ProtectedRoute>} />
             <Route path="/sets/:id/flashcards" element={<ProtectedRoute><Flashcards /></ProtectedRoute>} />
             <Route path="/sets/:id/test" element={<ProtectedRoute><Test /></ProtectedRoute>} />
+            <Route path="/sets/:id/quiz" element={<ProtectedRoute><Quiz /></ProtectedRoute>} />
             <Route path="/test" element={<ProtectedRoute><TestAll /></ProtectedRoute>} />
             <Route path="/explore" element={<ProtectedRoute><Explore /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getAllWords } from '../api/progress'
 import { TestRunner } from '../components/TestRunner'
+import { QuizRunner } from '../components/QuizRunner'
 import { Layout } from '../components/Layout'
 import { useLang } from '../context/LangContext'
 import type { Direction, TestWord } from '../utils/testEngine'
@@ -28,9 +29,11 @@ export default function TestAll() {
   // setup state
   const [selectedSetIds, setSelectedSetIds] = useState<Set<string>>(new Set())
   const [direction, setDirection] = useState<Direction>('def-to-word')
+  const [wordCountInput, setWordCountInput] = useState('')
 
-  // non-null when session is active
+  // active session
   const [sessionWords, setSessionWords] = useState<TestWord[] | null>(null)
+  const [quizWords, setQuizWords] = useState<TestWord[] | null>(null)
 
   useEffect(() => {
     getAllWords()
@@ -57,9 +60,26 @@ export default function TestAll() {
 
   const maxCount = selectedWords.length
 
-  const handleStart = () => {
+  /** Apply word-count limit and shuffle */
+  const getWords = () => {
+    const all = shuffle(selectedWords)
+    const n = parseInt(wordCountInput)
+    return n > 0 && n < all.length ? all.slice(0, n) : all
+  }
+
+  const effectiveCount = (() => {
+    const n = parseInt(wordCountInput)
+    return n > 0 && n < maxCount ? n : maxCount
+  })()
+
+  const handleStartStudy = () => {
     if (selectedSetIds.size === 0 || maxCount < MIN_WORDS) return
-    setSessionWords(shuffle(selectedWords))
+    setSessionWords(getWords())
+  }
+
+  const handleStartQuiz = () => {
+    if (selectedSetIds.size === 0 || maxCount < 1) return
+    setQuizWords(getWords())
   }
 
   if (loading) return (
@@ -78,6 +98,20 @@ export default function TestAll() {
       </div>
     </Layout>
   )
+
+  if (quizWords) {
+    return (
+      <Layout>
+        <QuizRunner
+          words={quizWords}
+          backLabel={t('test.backToSetup')}
+          skipSettings
+          defaultDirection={direction}
+          onBack={() => setQuizWords(null)}
+        />
+      </Layout>
+    )
+  }
 
   if (sessionWords) {
     return (
@@ -149,6 +183,33 @@ export default function TestAll() {
           </div>
         </div>
 
+        {/* Word count */}
+        <div className="mb-5 rounded-xl border bg-white p-5 shadow-sm">
+          <p className="mb-3 text-sm font-medium text-gray-700">{t('quiz.wordCount')}</p>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              min={1}
+              max={maxCount}
+              value={wordCountInput}
+              onChange={(e) => setWordCountInput(e.target.value)}
+              placeholder={`${t('quiz.wordCountAll')} (${maxCount})`}
+              className="w-40 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            />
+            {wordCountInput && (
+              <button
+                onClick={() => setWordCountInput('')}
+                className="text-xs text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            )}
+            <span className="text-sm text-gray-500">
+              → {effectiveCount} {wl(effectiveCount)}
+            </span>
+          </div>
+        </div>
+
         {/* Direction */}
         <div className="mb-6 rounded-xl border bg-white p-5 shadow-sm">
           <p className="mb-3 text-sm font-medium text-gray-700">{t('test.direction')}</p>
@@ -173,13 +234,22 @@ export default function TestAll() {
           <p className="mb-4 text-sm text-red-500">{t('test.noSetsSelected')}</p>
         )}
 
-        <button
-          onClick={handleStart}
-          disabled={selectedSetIds.size === 0 || maxCount < MIN_WORDS}
-          className="w-full rounded-lg bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-40"
-        >
-          {t('test.startBtn')} ({maxCount} {wl(maxCount)})
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={handleStartStudy}
+            disabled={selectedSetIds.size === 0 || maxCount < MIN_WORDS}
+            className="flex-1 rounded-lg bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-40"
+          >
+            {t('test.startBtn')} ({effectiveCount} {wl(effectiveCount)})
+          </button>
+          <button
+            onClick={handleStartQuiz}
+            disabled={selectedSetIds.size === 0 || maxCount < 1}
+            className="flex-1 rounded-lg border border-indigo-600 py-3 text-sm font-semibold text-indigo-600 hover:bg-indigo-50 disabled:opacity-40"
+          >
+            {t('quiz.quizBtn')} ({effectiveCount} {wl(effectiveCount)})
+          </button>
+        </div>
       </div>
     </Layout>
   )
