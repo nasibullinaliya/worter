@@ -150,6 +150,16 @@ const T = {
     'test.noSetsSelected': 'Выберите хотя бы один набор',
     'test.backToSetup': '← Настройки',
 
+    // stage review
+    'test.stage': 'Этап',
+    'test.stageComplete': 'Этап завершён',
+    'test.stageWords': 'Слова этапа',
+    'test.carryOver': 'перейдут дальше',
+    'test.continueNext': 'Следующий этап →',
+    'test.finish': 'Завершить',
+    'test.definition': 'Перевод',
+    'test.term': 'Слово',
+
     // reminder
     'reminder.timeToReview': 'Пора повторить:',
   },
@@ -294,6 +304,16 @@ const T = {
     'test.noSetsSelected': 'Select at least one set',
     'test.backToSetup': '← Setup',
 
+    // stage review
+    'test.stage': 'Stage',
+    'test.stageComplete': 'Stage complete',
+    'test.stageWords': 'Words in this stage',
+    'test.carryOver': 'carry over',
+    'test.continueNext': 'Next stage →',
+    'test.finish': 'Finish',
+    'test.definition': 'Translation',
+    'test.term': 'Word',
+
     'reminder.timeToReview': 'Time to review:',
   },
 
@@ -436,6 +456,16 @@ const T = {
     'test.wordCountAll': 'Alle',
     'test.noSetsSelected': 'Mindestens ein Set auswählen',
     'test.backToSetup': '← Einstellungen',
+
+    // stage review
+    'test.stage': 'Etappe',
+    'test.stageComplete': 'Etappe abgeschlossen',
+    'test.stageWords': 'Wörter dieser Etappe',
+    'test.carryOver': 'werden übertragen',
+    'test.continueNext': 'Nächste Etappe →',
+    'test.finish': 'Beenden',
+    'test.definition': 'Übersetzung',
+    'test.term': 'Wort',
 
     'reminder.timeToReview': 'Zeit zum Wiederholen:',
   },

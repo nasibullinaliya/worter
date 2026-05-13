@@ -42,8 +42,30 @@ export function checkAnswer(input: string, correct: string): boolean {
   return input.trim().toLowerCase() === correct.trim().toLowerCase()
 }
 
+export const STAGE_SIZE = 10
+
+/** Split words into shuffled chunks of STAGE_SIZE. */
+export function chunkWords(words: TestWord[], size = STAGE_SIZE): TestWord[][] {
+  const shuffled = shuffle(words)
+  const chunks: TestWord[][] = []
+  for (let i = 0; i < shuffled.length; i += size) {
+    chunks.push(shuffled.slice(i, i + size))
+  }
+  return chunks
+}
+
+/**
+ * Build the queue for one stage.
+ * Carry-overs (items waiting for their next phase) come first, shuffled with new words.
+ */
+export function buildStageQueue(carryOvers: QueueItem[], newWords: TestWord[]): QueueItem[] {
+  const newItems: QueueItem[] = newWords.map((w) => ({ wordId: w.wordId, phase: 'choice' as const }))
+  return shuffle([...carryOvers, ...newItems])
+}
+
+/** @deprecated Use buildStageQueue instead */
 export function buildInitialQueue(words: TestWord[]): QueueItem[] {
-  return shuffle(words).map((w) => ({ wordId: w.wordId, phase: 'choice' as const }))
+  return buildStageQueue([], words)
 }
 
 // ── Character-level diff ──────────────────────────────────────────────────────

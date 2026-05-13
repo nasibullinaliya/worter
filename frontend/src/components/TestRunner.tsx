@@ -6,13 +6,15 @@ import {
   type Direction,
   type QueueItem,
   type TestWord,
-  buildInitialQueue,
+  buildStageQueue,
   checkAnswer,
+  chunkWords,
   diffInput,
   getAnswer,
   getChoices,
   getHint,
   getQuestion,
+  STAGE_SIZE,
 } from '../utils/testEngine'
 
 interface FinishResult {
@@ -29,39 +31,63 @@ interface Props {
   onBack?: () => void
 }
 
-type Screen = 'settings' | 'running' | 'done'
+type Screen = 'settings' | 'running' | 'stage-review' | 'done'
 
-export function TestRunner({ words, backHref, backLabel, onFinish, defaultDirection, skipSettings, onBack }: Props) {
+export function TestRunner({
+  words,
+  backHref,
+  backLabel,
+  onFinish,
+  defaultDirection,
+  skipSettings,
+  onBack,
+}: Props) {
   const { t, wl, dateLocale } = useLang()
 
-  const [screen, setScreen] = useState<Screen>(() => skipSettings ? 'running' : 'settings')
-  const [direction, setDirection] = useState<Direction>(defaultDirection ?? 'def-to-word')
+  const [screen, setScreen] = useState<Screen>(() =>
+    skipSettings ? 'running' : 'settings',
+  )
+  const [direction, setDirection] = useState<Direction>(
+    defaultDirection ?? 'def-to-word',
+  )
 
-  // running state
-  const [queue, setQueue] = useState<QueueItem[]>(() => skipSettings ? buildInitialQueue(words) : [])
+  // ── Stage management ──────────────────────────────────────────────────────────
+  const [stages] = useState<TestWord[][]>(() => chunkWords(words, STAGE_SIZE))
+  const [stageIndex, setStageIndex] = useState(0)
+  // All words shown in the current stage (new + carry-overs) — used for review screen
+  const [stageWords, setStageWords] = useState<TestWord[]>([])
+  // Items to bring into the next stage
+  const [nextCarryOvers, setNextCarryOvers] = useState<QueueItem[]>([])
+
+  // ── Queue (current stage) ─────────────────────────────────────────────────────
+  const [queue, setQueue] = useState<QueueItem[]>([])
+
+  // ── Global completion tracking ────────────────────────────────────────────────
   const [doneIds, setDoneIds] = useState<Set<string>>(new Set())
+  // words that passed choice phase (contributes ½ progress step)
   const [choicePassedIds, setChoicePassedIds] = useState<Set<string>>(new Set())
 
-  // choices stored in state so keyboard handler has stable reference
+  // ── Per-item UI state — reset on each advance ─────────────────────────────────
   const [currentChoices, setCurrentChoices] = useState<string[]>([])
-
-  // per-item state — reset on each advance
   const [choiceSelected, setChoiceSelected] = useState<string | null>(null)
   const [typeInput, setTypeInput] = useState('')
   const [showHint, setShowHint] = useState(false)
   const [typeFeedback, setTypeFeedback] = useState<'idle' | 'wrong'>('idle')
   const [wrongAnswer, setWrongAnswer] = useState('')
-
-  // manual-advance: after a wrong answer the user clicks "Далее" instead of auto-skip
+  // After a wrong answer the user must click "Next" manually
   const [waitForNext, setWaitForNext] = useState(false)
-  const [pendingRequeue, setPendingRequeue] = useState<QueueItem[]>([])
+  // Which item to carry forward when the user clicks "Next"
+  const [pendingCarry, setPendingCarry] = useState<QueueItem | null>(null)
 
-  const [finishResult, setFinishResult] = useState<FinishResult | null | undefined>(undefined)
+  const [finishResult, setFinishResult] = useState<FinishResult | null | undefined>(
+    undefined,
+  )
 
   const inputRef = useRef<HTMLInputElement>(null)
   const wordMap = Object.fromEntries(words.map((w) => [w.wordId, w]))
   const total = words.length
 
+  // ── Helpers ───────────────────────────────────────────────────────────────────
   const resetItemState = () => {
     setChoiceSelected(null)
     setTypeInput('')
@@ -69,39 +95,61 @@ export function TestRunner({ words, backHref, backLabel, onFinish, defaultDirect
     setTypeFeedback('idle')
     setWrongAnswer('')
     setWaitForNext(false)
-    setPendingRequeue([])
+    setPendingCarry(null)
+  }
+
+  /** Build the queue + stageWords for a given stage and its incoming carry-overs. */
+  const initStage = (idx: number, carryOvers: QueueItem[]) => {
+    const batch = stages[idx] ?? []
+    const carryWords = carryOvers.map((c) => wordMap[c.wordId]).filter(Boolean) as TestWord[]
+    const allStageWords = [...carryWords, ...batch]
+    setStageIndex(idx)
+    setStageWords(allStageWords)
+    setNextCarryOvers([])
+    setQueue(buildStageQueue(carryOvers, batch))
+    resetItemState()
   }
 
   const start = () => {
-    setQueue(buildInitialQueue(words))
     setDoneIds(new Set())
     setChoicePassedIds(new Set())
     setFinishResult(undefined)
-    resetItemState()
+    initStage(0, [])
     setScreen('running')
   }
+
+  // Auto-start when skipSettings
+  useEffect(() => {
+    if (skipSettings) start()
+  }, [])
 
   const current = queue[0] ?? null
   const currentWord = current ? wordMap[current.wordId] : null
 
-  // Recompute choices when current choice-phase item changes
+  // ── Recompute choices when entering a new choice-phase item ───────────────────
   useEffect(() => {
     if (current?.phase === 'choice' && currentWord) {
       setCurrentChoices(getChoices(currentWord, words, direction))
     }
   }, [current?.wordId, current?.phase])
 
-  // Focus input when entering type phase
+  // ── Focus input when entering type phase ──────────────────────────────────────
   useEffect(() => {
     if (current?.phase === 'type' && typeFeedback === 'idle' && !waitForNext) {
-      const t = setTimeout(() => inputRef.current?.focus(), 50)
-      return () => clearTimeout(t)
+      const id = setTimeout(() => inputRef.current?.focus(), 50)
+      return () => clearTimeout(id)
     }
   }, [current?.wordId, current?.phase, typeFeedback, waitForNext])
 
-  // Keyboard shortcuts: 1–4 select choices
+  // ── Keyboard: 1–4 select choices ──────────────────────────────────────────────
   useEffect(() => {
-    if (screen !== 'running' || current?.phase !== 'choice' || choiceSelected !== null || waitForNext) return
+    if (
+      screen !== 'running' ||
+      current?.phase !== 'choice' ||
+      choiceSelected !== null ||
+      waitForNext
+    )
+      return
     const handler = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement) return
       const n = parseInt(e.key)
@@ -113,72 +161,120 @@ export function TestRunner({ words, backHref, backLabel, onFinish, defaultDirect
     return () => window.removeEventListener('keydown', handler)
   }, [screen, current?.phase, choiceSelected, waitForNext, currentChoices])
 
-  const advance = (requeue: QueueItem[], completedWordId?: string) => {
-    const [, ...rest] = queue
-    const nextDoneIds = completedWordId
+  // ── Core advance ──────────────────────────────────────────────────────────────
+  /**
+   * Move to the next item in the queue.
+   * @param carryItem  If set, this item will be carried over to the next stage.
+   * @param completedWordId  If set, this word is fully done (choice + type correct).
+   */
+  const advance = (carryItem: QueueItem | null, completedWordId?: string) => {
+    const newDoneIds = completedWordId
       ? new Set([...doneIds, completedWordId])
       : doneIds
-    const nextQueue = [...rest, ...requeue]
 
+    const newCarryOvers = carryItem
+      ? [...nextCarryOvers, carryItem]
+      : [...nextCarryOvers]
+
+    const [, ...restQueue] = queue
     resetItemState()
+    setDoneIds(newDoneIds)
 
-    if (nextQueue.length === 0) {
-      setDoneIds(nextDoneIds)
+    if (restQueue.length === 0) {
+      // Stage queue exhausted
+      setNextCarryOvers(newCarryOvers)
       setQueue([])
-      setScreen('done')
-      const knownIds = [...nextDoneIds]
-      if (onFinish) {
-        onFinish(knownIds)
-          .then((res) => setFinishResult(res))
-          .catch(() => setFinishResult(null))
+
+      const nextIdx = stageIndex + 1
+      const hasMore = nextIdx < stages.length || newCarryOvers.length > 0
+
+      if (!hasMore) {
+        // Session complete
+        setScreen('done')
+        if (onFinish) {
+          onFinish([...newDoneIds])
+            .then(setFinishResult)
+            .catch(() => setFinishResult(null))
+        }
+      } else {
+        setScreen('stage-review')
       }
     } else {
-      setDoneIds(nextDoneIds)
-      setQueue(nextQueue)
+      setNextCarryOvers(newCarryOvers)
+      setQueue(restQueue)
     }
   }
 
+  // ── Choice phase handlers ─────────────────────────────────────────────────────
   const handleChoiceSelect = (choice: string) => {
-    if (choiceSelected !== null || !currentWord || waitForNext) return
+    if (choiceSelected !== null || !currentWord || !current || waitForNext) return
     setChoiceSelected(choice)
     const correct = getAnswer(currentWord, direction)
 
     if (choice === correct) {
-      // Correct → record choice pass, auto-advance after 900ms, queue type phase
+      // Correct: track choice pass, carry forward to type phase in the next stage
       setChoicePassedIds((prev) => new Set([...prev, current.wordId]))
-      setTimeout(() => advance([{ wordId: current.wordId, phase: 'type' }]), 900)
+      setTimeout(
+        () => advance({ wordId: current.wordId, phase: 'type' }),
+        900,
+      )
     } else {
-      // Wrong → wait for manual "Next"
+      // Wrong: wait for manual "Next", carry forward as choice again
       setWaitForNext(true)
-      setPendingRequeue([{ wordId: current.wordId, phase: 'choice' }])
+      setPendingCarry({ wordId: current.wordId, phase: 'choice' })
     }
   }
 
+  // ── Type phase handlers ───────────────────────────────────────────────────────
   const handleTypeSubmit = () => {
-    if (!currentWord || typeFeedback === 'wrong' || waitForNext) return
+    if (!currentWord || !current || typeFeedback === 'wrong' || waitForNext) return
     const correct = getAnswer(currentWord, direction)
+
     if (checkAnswer(typeInput, correct)) {
-      advance([], current.wordId)
+      // Correct: word is fully done, no carry
+      advance(null, current.wordId)
     } else {
+      // Wrong: wait for manual "Next", carry forward as type again
       setWrongAnswer(correct)
       setTypeFeedback('wrong')
       setWaitForNext(true)
-      setPendingRequeue([{ wordId: current.wordId, phase: 'type' }])
+      setPendingCarry({ wordId: current.wordId, phase: 'type' })
     }
   }
 
-  const handleNext = () => {
-    advance(pendingRequeue)
+  const handleNext = () => advance(pendingCarry)
+
+  // ── Continue to next stage ────────────────────────────────────────────────────
+  const continueToNextStage = () => {
+    const nextIdx = stageIndex + 1
+
+    if (nextIdx >= stages.length && nextCarryOvers.length === 0) {
+      setScreen('done')
+      if (onFinish) {
+        onFinish([...doneIds]).then(setFinishResult).catch(() => setFinishResult(null))
+      }
+      return
+    }
+
+    initStage(nextIdx, nextCarryOvers)
+    setScreen('running')
   }
 
+  // ── BackLink helper ───────────────────────────────────────────────────────────
   const BackLink = ({ className }: { className?: string }) =>
     onBack ? (
-      <button onClick={onBack} className={className}>← {backLabel}</button>
+      <button onClick={onBack} className={className}>
+        ← {backLabel}
+      </button>
     ) : backHref ? (
-      <Link to={backHref} className={className}>← {backLabel}</Link>
+      <Link to={backHref} className={className}>
+        ← {backLabel}
+      </Link>
     ) : null
 
-  // ── Settings screen ──────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
+  // SETTINGS SCREEN
+  // ─────────────────────────────────────────────────────────────────────────────
   if (screen === 'settings') {
     return (
       <div className="mx-auto max-w-md py-10">
@@ -186,10 +282,14 @@ export function TestRunner({ words, backHref, backLabel, onFinish, defaultDirect
           <BackLink className="text-sm text-gray-500 hover:text-gray-700" />
         </div>
 
-        <h2 className="mb-6 text-2xl font-bold text-gray-900">{t('test.settingsTitle')}</h2>
+        <h2 className="mb-6 text-2xl font-bold text-gray-900">
+          {t('test.settingsTitle')}
+        </h2>
 
         <div className="mb-6 rounded-xl border bg-white p-5 shadow-sm">
-          <p className="mb-3 text-sm font-medium text-gray-700">{t('test.direction')}</p>
+          <p className="mb-3 text-sm font-medium text-gray-700">
+            {t('test.direction')}
+          </p>
           <div className="flex gap-2">
             {(['def-to-word', 'word-to-def'] as Direction[]).map((d) => (
               <button
@@ -219,16 +319,91 @@ export function TestRunner({ words, backHref, backLabel, onFinish, defaultDirect
     )
   }
 
-  // ── Done screen ──────────────────────────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────────────────────
+  // STAGE REVIEW SCREEN
+  // ─────────────────────────────────────────────────────────────────────────────
+  if (screen === 'stage-review') {
+    const nextIdx = stageIndex + 1
+    const hasMoreStages = nextIdx < stages.length || nextCarryOvers.length > 0
+    const carryCount = nextCarryOvers.length
+
+    return (
+      <div className="mx-auto max-w-lg py-10">
+        {/* Header */}
+        <div className="mb-1 flex items-center justify-between">
+          <h2 className="text-xl font-bold text-gray-900">
+            {t('test.stageComplete')}
+          </h2>
+          <span className="text-sm text-gray-400">
+            {t('test.stage')} {stageIndex + 1}
+          </span>
+        </div>
+
+        {/* Global progress */}
+        <p className="mb-1 text-sm text-gray-500">
+          {doneIds.size} / {total} {wl(total)} {t('test.learned')}
+        </p>
+
+        {/* Carry-over hint */}
+        {carryCount > 0 && (
+          <p className="mb-4 text-xs text-amber-600">
+            {carryCount} {wl(carryCount)} {t('test.carryOver')}
+          </p>
+        )}
+
+        {/* Word list */}
+        <div className="mb-6 overflow-hidden rounded-xl border bg-white shadow-sm">
+          <div className="grid grid-cols-2 border-b bg-gray-50 px-4 py-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+              {t('test.definition')}
+            </span>
+            <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+              {t('test.term')}
+            </span>
+          </div>
+          <div className="divide-y">
+            {stageWords.map((word) => (
+              <div
+                key={word.wordId}
+                className="grid grid-cols-2 gap-2 px-4 py-3 text-sm"
+              >
+                <span className="text-gray-500 leading-snug">{word.definition}</span>
+                <span className="font-medium text-gray-900 leading-snug">
+                  {word.term}
+                  {doneIds.has(word.wordId) && (
+                    <span className="ml-1.5 text-xs text-green-500">✓</span>
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <button
+          onClick={continueToNextStage}
+          className="w-full rounded-lg bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700"
+        >
+          {hasMoreStages ? t('test.continueNext') : t('test.finish')}
+        </button>
+      </div>
+    )
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // DONE SCREEN
+  // ─────────────────────────────────────────────────────────────────────────────
   if (screen === 'done') {
     const score = doneIds.size
     return (
       <div className="mx-auto max-w-md py-10 text-center">
-        <div className="mb-6 text-5xl">{score === total ? '🏆' : score >= total / 2 ? '👍' : '📖'}</div>
+        <div className="mb-6 text-5xl">
+          {score === total ? '🏆' : score >= total / 2 ? '👍' : '📖'}
+        </div>
         <h2 className="mb-2 text-2xl font-bold text-gray-900">{t('test.done')}</h2>
         <p className="mb-6 text-gray-500">
           {t('test.correctlyWritten')}{' '}
-          <strong className="text-indigo-600">{score}</strong> {t('common.outOf')} {total}
+          <strong className="text-indigo-600">{score}</strong> {t('common.outOf')}{' '}
+          {total}
         </p>
         <ProgressBar known={score} total={total} className="mb-8" />
 
@@ -268,12 +443,17 @@ export function TestRunner({ words, backHref, backLabel, onFinish, defaultDirect
     )
   }
 
-  // ── Running screen ───────────────────────────────────────────────────────────
-  if (!currentWord) return null
+  // ─────────────────────────────────────────────────────────────────────────────
+  // RUNNING SCREEN
+  // ─────────────────────────────────────────────────────────────────────────────
+  if (!currentWord || !current) return null
 
   const questionText = getQuestion(currentWord, direction)
   const answerText = getAnswer(currentWord, direction)
   const hint = getHint(answerText)
+
+  // Progress: each word contributes 2 steps (choice + type)
+  const progressDone = choicePassedIds.size + doneIds.size
 
   return (
     <div className="mx-auto max-w-lg">
@@ -284,22 +464,27 @@ export function TestRunner({ words, backHref, backLabel, onFinish, defaultDirect
           <span className="text-sm text-gray-500">
             {doneIds.size} / {total}
           </span>
-          <span className="ml-3 text-xs text-gray-400">
+          <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+            {t('test.stage')} {stageIndex + 1}
+          </span>
+          <span className="ml-2 text-xs text-gray-400">
             ({queue.length} {t('test.inQueue')})
           </span>
         </div>
       </div>
 
-      {/* Progress bar covers both phases: each word = 2 steps */}
-      <ProgressBar known={choicePassedIds.size + doneIds.size} total={total * 2} className="mb-6" />
+      {/* Progress bar — global 2-step progress */}
+      <ProgressBar known={progressDone} total={total * 2} className="mb-6" />
 
       {/* Phase badge */}
       <div className="mb-3 flex items-center gap-2">
-        <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-          current.phase === 'choice'
-            ? 'bg-blue-100 text-blue-700'
-            : 'bg-violet-100 text-violet-700'
-        }`}>
+        <span
+          className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+            current.phase === 'choice'
+              ? 'bg-blue-100 text-blue-700'
+              : 'bg-violet-100 text-violet-700'
+          }`}
+        >
           {current.phase === 'choice' ? t('test.choicePhase') : t('test.typePhase')}
         </span>
       </div>
@@ -307,19 +492,22 @@ export function TestRunner({ words, backHref, backLabel, onFinish, defaultDirect
       {/* Question card */}
       <div className="mb-6 rounded-2xl border bg-white p-8 text-center shadow-md">
         <p className="mb-2 text-xs uppercase tracking-wide text-gray-400">
-          {direction === 'word-to-def' ? t('test.questionMeaning') : t('test.questionTranslate')}
+          {direction === 'word-to-def'
+            ? t('test.questionMeaning')
+            : t('test.questionTranslate')}
         </p>
         <p className="text-3xl font-bold text-gray-900">{questionText}</p>
       </div>
 
-      {/* Choice phase */}
+      {/* ── Choice phase ── */}
       {current.phase === 'choice' && (
         <div className="grid gap-3">
           {currentChoices.map((choice, idx) => {
             const isCorrect = choice === answerText
             const isSelected = choice === choiceSelected
 
-            let style = 'border-gray-200 text-gray-800 hover:border-indigo-400 hover:bg-indigo-50'
+            let style =
+              'border-gray-200 text-gray-800 hover:border-indigo-400 hover:bg-indigo-50'
             if (choiceSelected !== null) {
               if (isCorrect) style = 'border-green-400 bg-green-50 text-green-800'
               else if (isSelected) style = 'border-red-400 bg-red-50 text-red-800'
@@ -341,14 +529,12 @@ export function TestRunner({ words, backHref, backLabel, onFinish, defaultDirect
             )
           })}
 
-          {/* Keyboard hint */}
           {!choiceSelected && (
             <p className="mt-1 text-center text-xs text-gray-400">
               {t('test.keyboardHint').replace('{n}', String(currentChoices.length))}
             </p>
           )}
 
-          {/* Manual-advance button after wrong choice */}
           {waitForNext && (
             <button
               onClick={handleNext}
@@ -360,12 +546,11 @@ export function TestRunner({ words, backHref, backLabel, onFinish, defaultDirect
         </div>
       )}
 
-      {/* Type phase */}
+      {/* ── Type phase ── */}
       {current.phase === 'type' && (
         <div>
           {waitForNext ? (
             <>
-              {/* Correct answer — green */}
               <div className="mb-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3">
                 <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-green-600">
                   {t('test.correctAnswer')}
@@ -373,12 +558,20 @@ export function TestRunner({ words, backHref, backLabel, onFinish, defaultDirect
                 <p className="font-mono text-lg text-green-800">{wrongAnswer}</p>
               </div>
 
-              {/* User's answer — wrong/missing chars red, no fill */}
               <div className="mb-4 rounded-xl border border-red-200 px-4 py-3 font-mono text-lg">
                 {diffInput(typeInput, wrongAnswer).map((d, idx) =>
-                  d.status === 'ok'
-                    ? <span key={idx} className="text-gray-700">{d.char}</span>
-                    : <span key={idx} className="font-bold text-red-600 underline decoration-2">{d.char === '_' ? '_' : d.char}</span>
+                  d.status === 'ok' ? (
+                    <span key={idx} className="text-gray-700">
+                      {d.char}
+                    </span>
+                  ) : (
+                    <span
+                      key={idx}
+                      className="font-bold text-red-600 underline decoration-2"
+                    >
+                      {d.char === '_' ? '_' : d.char}
+                    </span>
+                  ),
                 )}
               </div>
 
@@ -413,7 +606,7 @@ export function TestRunner({ words, backHref, backLabel, onFinish, defaultDirect
               {!showHint ? (
                 <button
                   onClick={() => setShowHint(true)}
-                  className="mt-3 text-xs text-gray-400 hover:text-gray-600 underline"
+                  className="mt-3 text-xs text-gray-400 underline hover:text-gray-600"
                 >
                   {t('test.showHint')}
                 </button>
