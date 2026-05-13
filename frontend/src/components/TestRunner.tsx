@@ -161,6 +161,18 @@ export function TestRunner({
     return () => window.removeEventListener('keydown', handler)
   }, [screen, current?.phase, choiceSelected, waitForNext, currentChoices])
 
+  // ── Keyboard: any key advances after a type-phase wrong answer ────────────────
+  useEffect(() => {
+    if (screen !== 'running' || current?.phase !== 'type' || !waitForNext) return
+    const handler = (e: KeyboardEvent) => {
+      // Ignore modifier-only keys
+      if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab'].includes(e.key)) return
+      handleNext()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [screen, current?.phase, waitForNext, pendingCarry])
+
   // ── Core advance ──────────────────────────────────────────────────────────────
   /**
    * Move to the next item in the queue.
@@ -325,31 +337,21 @@ export function TestRunner({
   if (screen === 'stage-review') {
     const nextIdx = stageIndex + 1
     const hasMoreStages = nextIdx < stages.length || nextCarryOvers.length > 0
-    const carryCount = nextCarryOvers.length
 
     return (
       <div className="mx-auto max-w-lg py-10">
         {/* Header */}
         <div className="mb-1 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">
-            {t('test.stageComplete')}
-          </h2>
           <span className="text-sm text-gray-400">
             {t('test.stage')} {stageIndex + 1}
           </span>
+          <span className="text-sm text-gray-500">
+            {doneIds.size} / {total} {wl(total)} {t('test.learned')}
+          </span>
         </div>
 
-        {/* Global progress */}
-        <p className="mb-1 text-sm text-gray-500">
-          {doneIds.size} / {total} {wl(total)} {t('test.learned')}
-        </p>
-
-        {/* Carry-over hint */}
-        {carryCount > 0 && (
-          <p className="mb-4 text-xs text-amber-600">
-            {carryCount} {wl(carryCount)} {t('test.carryOver')}
-          </p>
-        )}
+        {/* Progress bar */}
+        <ProgressBar known={doneIds.size} total={total} className="mb-6" />
 
         {/* Word list */}
         <div className="mb-6 overflow-hidden rounded-xl border bg-white shadow-sm">

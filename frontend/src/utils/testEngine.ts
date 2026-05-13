@@ -39,7 +39,8 @@ export function getHint(answer: string): string {
 }
 
 export function checkAnswer(input: string, correct: string): boolean {
-  return input.trim().toLowerCase() === correct.trim().toLowerCase()
+  const normalize = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase()
+  return normalize(input) === normalize(correct)
 }
 
 export const STAGE_SIZE = 10
