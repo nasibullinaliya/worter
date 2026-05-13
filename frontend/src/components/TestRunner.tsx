@@ -563,7 +563,7 @@ export function TestRunner({
               ref={nextAfterWrongChoiceRef}
               onClick={handleNext}
               onKeyDown={(e) => {
-                if (!['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab'].includes(e.key)) {
+                if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault()
                   handleNext()
                 }
@@ -609,7 +609,7 @@ export function TestRunner({
                 ref={nextAfterWrongRef}
                 onClick={handleNext}
                 onKeyDown={(e) => {
-                  if (!['Shift', 'Control', 'Alt', 'Meta', 'CapsLock', 'Tab'].includes(e.key)) {
+                  if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault()
                     handleNext()
                   }
