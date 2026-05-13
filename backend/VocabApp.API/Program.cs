@@ -1,5 +1,6 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -74,6 +75,13 @@ builder.Services.AddCors(opt =>
         .AllowAnyMethod()));
 
 var app = builder.Build();
+
+// Trust reverse-proxy headers (Render, nginx, etc.)
+// Required so ASP.NET Core uses https:// scheme in generated URLs (Swagger, redirects)
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
 
 // Применяем миграции автоматически при старте
 using (var scope = app.Services.CreateScope())
