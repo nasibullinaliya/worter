@@ -6,6 +6,38 @@ import { ReviewBanner } from '../components/ReviewBanner'
 import { ProgressBar } from '../components/ProgressBar'
 import { useLang } from '../context/LangContext'
 
+// SRS progression days shown in the UI
+const STAGE_DAYS = [1, 2, 7, 14]
+
+/** Pip row showing "1 / 2 / 7 / 14" with colour-coded progress. */
+function StageProgress({ stage }: { stage: number }) {
+  return (
+    <span className="flex items-center font-mono text-xs">
+      {STAGE_DAYS.map((day, i) => {
+        let cls: string
+        if (stage > STAGE_DAYS.length - 1) {
+          // stage 4 = all complete
+          cls = 'font-bold text-green-600'
+        } else if (i < stage) {
+          cls = 'font-bold text-green-600'   // done
+        } else if (i === stage) {
+          cls = 'font-bold text-gray-800'    // current (stage 0) or next due
+        } else {
+          cls = 'text-gray-300'              // future
+        }
+        return (
+          <span key={day}>
+            <span className={cls}>{day}</span>
+            {i < STAGE_DAYS.length - 1 && (
+              <span className="mx-0.5 text-gray-300">/</span>
+            )}
+          </span>
+        )
+      })}
+    </span>
+  )
+}
+
 export default function Dashboard() {
   const { t } = useLang()
   const [sets, setSets] = useState<SetSummaryDto[]>([])
@@ -25,12 +57,9 @@ export default function Dashboard() {
     setReminders((prev) => prev.filter((r) => r.setId !== id))
   }
 
-  const dueIds = new Set(reminders.map((r) => r.setId))
-  const dueSets = sets.filter((s) => dueIds.has(s.id))
-  const otherSets = sets.filter((s) => !dueIds.has(s.id))
-
   return (
     <Layout reminderCount={reminders.length}>
+      {/* Top bar */}
       <div className="mb-6 flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">{t('dashboard.title')}</h2>
         <div className="flex gap-2">
@@ -53,49 +82,42 @@ export default function Dashboard() {
         <div className="flex justify-center py-20">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
         </div>
+      ) : sets.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-300 bg-white py-16 text-center">
+          <p className="text-gray-500">{t('dashboard.noSets')}</p>
+          <p className="mt-1 text-sm text-gray-400">
+            <Link to="/sets/new" className="text-indigo-600 hover:underline">
+              {t('dashboard.createFirst')}
+            </Link>
+          </p>
+        </div>
       ) : (
-        <>
-          <ReviewBanner reminders={reminders} />
+        <div className="flex gap-6">
+          {/* ── Main: set cards ─────────────────────────────────── */}
+          <div className="min-w-0 flex-1">
+            {/* Reminder panel — mobile only (above cards) */}
+            {reminders.length > 0 && (
+              <div className="mb-6 lg:hidden">
+                <ReviewBanner reminders={reminders} />
+              </div>
+            )}
 
-          {sets.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-gray-300 bg-white py-16 text-center">
-              <p className="text-gray-500">{t('dashboard.noSets')}</p>
-              <p className="mt-1 text-sm text-gray-400">
-                <Link to="/sets/new" className="text-indigo-600 hover:underline">
-                  {t('dashboard.createFirst')}
-                </Link>
-              </p>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {sets.map((set) => (
+                <SetCard key={set.id} set={set} onDelete={handleDelete} />
+              ))}
             </div>
-          ) : (
-            <>
-              {dueSets.length > 0 && (
-                <section className="mb-8">
-                  <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-amber-600">
-                    {t('dashboard.dueToday')}
-                  </h3>
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {dueSets.map((set) => (
-                      <SetCard key={set.id} set={set} onDelete={handleDelete} />
-                    ))}
-                  </div>
-                </section>
-              )}
+          </div>
 
-              <section>
-                {dueSets.length > 0 && (
-                  <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-400">
-                    {t('dashboard.allSets')}
-                  </h3>
-                )}
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {otherSets.map((set) => (
-                    <SetCard key={set.id} set={set} onDelete={handleDelete} />
-                  ))}
-                </div>
-              </section>
-            </>
+          {/* ── Sidebar: reminder panel — desktop only ──────────── */}
+          {reminders.length > 0 && (
+            <div className="hidden w-72 shrink-0 lg:block">
+              <div className="sticky top-6">
+                <ReviewBanner reminders={reminders} />
+              </div>
+            </div>
           )}
-        </>
+        </div>
       )}
     </Layout>
   )
@@ -104,7 +126,6 @@ export default function Dashboard() {
 function SetCard({ set, onDelete }: { set: SetSummaryDto; onDelete: (id: string) => void }) {
   const { t, wl } = useLang()
   const p = set.progress
-  const stageKey = `stage.${p?.reviewStage}` as `stage.${number}`
 
   return (
     <div className="flex flex-col rounded-xl border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
@@ -135,16 +156,12 @@ function SetCard({ set, onDelete }: { set: SetSummaryDto; onDelete: (id: string)
       <div className="mt-auto flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <span>{set.wordCount} {wl(set.wordCount)}</span>
-          {p && p.reviewStage < 5 && (
-            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STAGE_COLORS[p.reviewStage]}`}>
-              {(t as (k: string) => string)(stageKey)}
-            </span>
-          )}
-          {p && p.reviewStage >= 5 && (
-            <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-              {t('dashboard.completed')}
-            </span>
-          )}
+
+          {/* SRS stage pips */}
+          {p ? (
+            <StageProgress stage={p.reviewStage} />
+          ) : null}
+
           {!set.isOwner && (
             <span className="text-xs text-gray-400">{t('dashboard.saved')}</span>
           )}
@@ -168,11 +185,3 @@ function SetCard({ set, onDelete }: { set: SetSummaryDto; onDelete: (id: string)
     </div>
   )
 }
-
-const STAGE_COLORS = [
-  'bg-blue-100 text-blue-700',
-  'bg-indigo-100 text-indigo-700',
-  'bg-violet-100 text-violet-700',
-  'bg-purple-100 text-purple-700',
-  'bg-green-100 text-green-700',
-]
