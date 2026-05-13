@@ -27,7 +27,6 @@ export default function TestAll() {
 
   // setup state
   const [selectedSetIds, setSelectedSetIds] = useState<Set<string>>(new Set())
-  const [wordCountInput, setWordCountInput] = useState('')
   const [direction, setDirection] = useState<Direction>('def-to-word')
 
   // non-null when session is active
@@ -57,14 +56,10 @@ export default function TestAll() {
   )
 
   const maxCount = selectedWords.length
-  const parsedCount = parseInt(wordCountInput)
-  const isCountAll = wordCountInput === '' || isNaN(parsedCount)
-  const effectiveCount = isCountAll ? maxCount : Math.min(Math.max(parsedCount, MIN_WORDS), maxCount)
 
   const handleStart = () => {
     if (selectedSetIds.size === 0 || maxCount < MIN_WORDS) return
-    const sampled = isCountAll ? shuffle(selectedWords) : shuffle(selectedWords).slice(0, effectiveCount)
-    setSessionWords(sampled)
+    setSessionWords(shuffle(selectedWords))
   }
 
   if (loading) return (
@@ -154,29 +149,6 @@ export default function TestAll() {
           </div>
         </div>
 
-        {/* Word count */}
-        <div className="mb-5 rounded-xl border bg-white p-5 shadow-sm">
-          <p className="mb-3 text-sm font-medium text-gray-700">{t('test.wordCountLabel')}</p>
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              min={MIN_WORDS}
-              max={maxCount}
-              value={wordCountInput}
-              onChange={(e) => setWordCountInput(e.target.value)}
-              placeholder={String(maxCount)}
-              className="w-24 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-            />
-            <button
-              onClick={() => setWordCountInput('')}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
-            >
-              {t('test.wordCountAll')}
-            </button>
-            <span className="text-sm text-gray-400">/ {maxCount} {wl(maxCount)}</span>
-          </div>
-        </div>
-
         {/* Direction */}
         <div className="mb-6 rounded-xl border bg-white p-5 shadow-sm">
           <p className="mb-3 text-sm font-medium text-gray-700">{t('test.direction')}</p>
@@ -206,7 +178,7 @@ export default function TestAll() {
           disabled={selectedSetIds.size === 0 || maxCount < MIN_WORDS}
           className="w-full rounded-lg bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-40"
         >
-          {t('test.startBtn')} ({effectiveCount} {wl(effectiveCount)})
+          {t('test.startBtn')} ({maxCount} {wl(maxCount)})
         </button>
       </div>
     </Layout>

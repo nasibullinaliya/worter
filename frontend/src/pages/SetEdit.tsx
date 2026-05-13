@@ -27,6 +27,7 @@ export default function SetEdit() {
 
   const [importText, setImportText] = useState('')
   const [importMode, setImportMode] = useState(false)
+  const [separator, setSeparator] = useState('-')
 
   const [error, setError] = useState('')
 
@@ -80,7 +81,7 @@ export default function SetEdit() {
 
   const handleImport = async () => {
     if (!set || !importText.trim()) return
-    const words = parseImportText(importText)
+    const words = parseImportText(importText, separator)
     if (words.length === 0) { setError(t('form.notRecognized')); return }
     const added = await addWords(set.id, words)
     setSet((prev) => prev ? { ...prev, words: [...prev.words, ...added] } : prev)
@@ -166,16 +167,26 @@ export default function SetEdit() {
 
           {importMode && (
             <div className="border-b p-5">
+              {/* Separator row */}
+              <div className="mb-2 flex items-center gap-2">
+                <span className="text-sm text-gray-500">{t('form.separator')}:</span>
+                <input
+                  type="text"
+                  value={separator}
+                  onChange={(e) => setSeparator(e.target.value)}
+                  className="w-20 rounded-lg border border-gray-300 px-2 py-1 text-center font-mono text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                />
+              </div>
               <textarea
                 value={importText}
                 onChange={(e) => setImportText(e.target.value)}
                 rows={6}
-                placeholder={"apple - яблоко\nbanana - банан"}
+                placeholder={`apple ${separator || '-'} яблоко\nbanana ${separator || '-'} банан`}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
               />
               {importText.trim() && (
                 <p className="mt-1 text-xs text-gray-500">
-                  {t('form.recognized')} {parseImportText(importText).length} {wl(parseImportText(importText).length)}
+                  {t('form.recognized')} {parseImportText(importText, separator).length} {wl(parseImportText(importText, separator).length)}
                 </p>
               )}
               <button

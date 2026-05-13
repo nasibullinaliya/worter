@@ -12,16 +12,17 @@ export default function SetNew() {
   const [description, setDescription] = useState('')
   const [isPublic, setIsPublic] = useState(false)
   const [importText, setImportText] = useState('')
+  const [separator, setSeparator] = useState('-')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const parsedCount = importText.trim() ? parseImportText(importText).length : 0
+  const parsedCount = importText.trim() ? parseImportText(importText, separator).length : 0
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
 
-    const words = importText.trim() ? parseImportText(importText) : []
+    const words = importText.trim() ? parseImportText(importText, separator) : []
     if (importText.trim() && words.length === 0) {
       setError(t('form.parseError'))
       return
@@ -94,14 +95,26 @@ export default function SetNew() {
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">
               {t('form.importWords')}
-              <span className="ml-2 font-normal text-gray-400">({t('form.importHint')})</span>
             </label>
+            {/* Separator row */}
+            <div className="mb-2 flex items-center gap-2">
+              <span className="text-sm text-gray-500">{t('form.separator')}:</span>
+              <input
+                type="text"
+                value={separator}
+                onChange={(e) => setSeparator(e.target.value)}
+                className="w-20 rounded-lg border border-gray-300 px-2 py-1 text-center font-mono text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              />
+              <span className="text-xs text-gray-400">
+                {t('form.importHint').replace('{sep}', separator || '-')}
+              </span>
+            </div>
             <textarea
               value={importText}
               onChange={(e) => setImportText(e.target.value)}
               rows={8}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-              placeholder={"apple - яблоко\nbanana - банан\ncherry - вишня"}
+              placeholder={`apple ${separator || '-'} яблоко\nbanana ${separator || '-'} банан`}
             />
             {importText.trim() && (
               <p className={`mt-1 text-xs ${parsedCount > 0 ? 'text-green-600' : 'text-red-500'}`}>
