@@ -70,6 +70,12 @@ export default function Dashboard() {
             {t('dashboard.studyAll')}
           </Link>
           <Link
+            to="/quiz"
+            className="rounded-lg border border-gray-400 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+          >
+            {t('quiz.quizBtn')}
+          </Link>
+          <Link
             to="/sets/new"
             className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
           >

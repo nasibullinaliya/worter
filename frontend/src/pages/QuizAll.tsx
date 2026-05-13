@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getAllWords } from '../api/progress'
-import { TestRunner } from '../components/TestRunner'
+import { QuizRunner } from '../components/QuizRunner'
 import { Layout } from '../components/Layout'
 import { useLang } from '../context/LangContext'
 import type { Direction, TestWord } from '../utils/testEngine'
-
-const MIN_WORDS = 2
 
 interface SetInfo {
   setId: string
@@ -18,7 +16,7 @@ function shuffle<T>(arr: T[]): T[] {
   return [...arr].sort(() => Math.random() - 0.5)
 }
 
-export default function TestAll() {
+export default function QuizAll() {
   const { t, wl } = useLang()
 
   const [sets, setSets] = useState<SetInfo[] | null>(null)
@@ -26,7 +24,6 @@ export default function TestAll() {
   const [error, setError] = useState('')
 
   const [selectedSetIds, setSelectedSetIds] = useState<Set<string>>(new Set())
-  const [direction, setDirection] = useState<Direction>('def-to-word')
   const [sessionWords, setSessionWords] = useState<TestWord[] | null>(null)
 
   useEffect(() => {
@@ -52,11 +49,6 @@ export default function TestAll() {
     [sets, selectedSetIds],
   )
 
-  const handleStart = () => {
-    if (selectedSetIds.size === 0 || selectedWords.length < MIN_WORDS) return
-    setSessionWords(shuffle(selectedWords))
-  }
-
   if (loading) return (
     <Layout>
       <div className="flex justify-center py-20">
@@ -77,11 +69,9 @@ export default function TestAll() {
   if (sessionWords) {
     return (
       <Layout>
-        <TestRunner
+        <QuizRunner
           words={sessionWords}
           backLabel={t('test.backToSetup')}
-          skipSettings
-          defaultDirection={direction}
           onBack={() => setSessionWords(null)}
         />
       </Layout>
@@ -108,7 +98,7 @@ export default function TestAll() {
           </Link>
         </div>
 
-        <h2 className="mb-6 text-2xl font-bold text-gray-900">{t('test.allTitle')}</h2>
+        <h2 className="mb-6 text-2xl font-bold text-gray-900">{t('quiz.allTitle')}</h2>
 
         {/* Set selection */}
         <div className="mb-5 rounded-xl border bg-white p-5 shadow-sm">
@@ -137,36 +127,16 @@ export default function TestAll() {
           </div>
         </div>
 
-        {/* Direction */}
-        <div className="mb-6 rounded-xl border bg-white p-5 shadow-sm">
-          <p className="mb-3 text-sm font-medium text-gray-700">{t('test.direction')}</p>
-          <div className="flex gap-2">
-            {(['def-to-word', 'word-to-def'] as Direction[]).map((d) => (
-              <button
-                key={d}
-                onClick={() => setDirection(d)}
-                className={`flex-1 rounded-lg border py-2 text-sm font-medium transition-colors ${
-                  direction === d
-                    ? 'border-indigo-600 bg-indigo-600 text-white'
-                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                {d === 'word-to-def' ? t('test.wordToDef') : t('test.defToWord')}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {selectedSetIds.size === 0 && (
           <p className="mb-4 text-sm text-red-500">{t('test.noSetsSelected')}</p>
         )}
 
         <button
-          onClick={handleStart}
-          disabled={selectedSetIds.size === 0 || selectedWords.length < MIN_WORDS}
+          onClick={() => setSessionWords(shuffle(selectedWords))}
+          disabled={selectedSetIds.size === 0 || selectedWords.length < 1}
           className="w-full rounded-lg bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-40"
         >
-          {t('test.startBtn')} ({selectedWords.length} {wl(selectedWords.length)})
+          {t('quiz.startBtn')} ({selectedWords.length} {wl(selectedWords.length)})
         </button>
       </div>
     </Layout>

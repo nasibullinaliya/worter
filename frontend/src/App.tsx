@@ -13,6 +13,7 @@ import Flashcards from './pages/Flashcards'
 import Test from './pages/Test'
 import Quiz from './pages/Quiz'
 import TestAll from './pages/TestAll'
+import QuizAll from './pages/QuizAll'
 import Explore from './pages/Explore'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ''
@@ -34,6 +35,7 @@ export default function App() {
             <Route path="/sets/:id/test" element={<ProtectedRoute><Test /></ProtectedRoute>} />
             <Route path="/sets/:id/quiz" element={<ProtectedRoute><Quiz /></ProtectedRoute>} />
             <Route path="/test" element={<ProtectedRoute><TestAll /></ProtectedRoute>} />
+            <Route path="/quiz" element={<ProtectedRoute><QuizAll /></ProtectedRoute>} />
             <Route path="/explore" element={<ProtectedRoute><Explore /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>

@@ -178,6 +178,7 @@ const T = {
     'quiz.wordCount': 'Количество слов',
     'quiz.wordCountAll': 'Все',
     'quiz.quizBtn': 'Тест',
+    'quiz.allTitle': 'Тест по всем наборам',
 
     // reminder
     'reminder.timeToReview': 'Пора повторить:',
@@ -351,6 +352,7 @@ const T = {
     'quiz.wordCount': 'Word count',
     'quiz.wordCountAll': 'All',
     'quiz.quizBtn': 'Test',
+    'quiz.allTitle': 'Test — All Sets',
 
     'reminder.timeToReview': 'Time to review:',
   },
@@ -523,6 +525,7 @@ const T = {
     'quiz.wordCount': 'Anzahl Wörter',
     'quiz.wordCountAll': 'Alle',
     'quiz.quizBtn': 'Test',
+    'quiz.allTitle': 'Test — Alle Sets',
 
     'reminder.timeToReview': 'Zeit zum Wiederholen:',
   },
