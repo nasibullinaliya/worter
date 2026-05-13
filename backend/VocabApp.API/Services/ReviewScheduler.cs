@@ -33,15 +33,22 @@ public static class ReviewScheduler
 
     public static void RecordReview(SetProgress progress, int knownCount, int totalWords)
     {
-        progress.LastStudiedAt = DateTime.UtcNow;
+        var now = DateTime.UtcNow;
+        progress.LastStudiedAt = now;
         progress.KnownCount = knownCount;
         progress.TotalWords = totalWords;
-        progress.ReviewStage = Math.Min(progress.ReviewStage + 1, Intervals.Length + 1);
 
-        // Stage 4 = complete (all intervals done)
-        progress.NextReviewAt = progress.ReviewStage <= Intervals.Length
-            ? progress.FirstStudiedAt.AddDays(Intervals[progress.ReviewStage - 1])
-            : null;
+        // Advance stage only when the scheduled review date has arrived.
+        // Multiple sessions on the same day do NOT advance the stage.
+        if (progress.NextReviewAt.HasValue && progress.NextReviewAt.Value <= now)
+        {
+            progress.ReviewStage = Math.Min(progress.ReviewStage + 1, Intervals.Length + 1);
+
+            // Stage 4 = complete
+            progress.NextReviewAt = progress.ReviewStage <= Intervals.Length
+                ? progress.FirstStudiedAt.AddDays(Intervals[progress.ReviewStage - 1])
+                : null;
+        }
     }
 
     /// Returns true when the review deadline has been missed by more than GracePeriodDays.
