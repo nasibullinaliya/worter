@@ -114,7 +114,7 @@ export default function SetDetail() {
       </div>
 
       {/* Study buttons */}
-      {set.words.length > 0 && (
+      {set.isOwner && set.words.length > 0 && (
         <div className="mb-6 flex flex-wrap gap-3">
           <Link
             to={`/sets/${set.id}/flashcards`}
