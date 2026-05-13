@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: vocab
+      POSTGRES_USER: vocab
+      POSTGRES_PASSWORD: vocab
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vocab"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Default: Host=postgres;Database=vocab;Username=vocab;Password=vocab
+      Jwt__Secret: super-secret-key-change-in-production-!!
+      Jwt__Issuer: vocab-app
+      Jwt__ExpiresDays: "7"
+      Frontend__Url: http://localhost:5173
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+    ports:
+      - "5050:8080"
+
+  web:
+    build: ./frontend
+    depends_on:
+      - api
+    environment:
+      VITE_API_URL: http://localhost:5050
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend/src:/app/src
+
+volumes:
+  postgres_data:

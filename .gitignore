@@ -1,0 +1,14 @@
+# Backend
+backend/VocabApp.API/bin/
+backend/VocabApp.API/obj/
+*.user
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+
+# Root
+.env
+.DS_Store
