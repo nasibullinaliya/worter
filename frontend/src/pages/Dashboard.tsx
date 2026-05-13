@@ -7,7 +7,7 @@ import { ProgressBar } from '../components/ProgressBar'
 import { useLang } from '../context/LangContext'
 
 export default function Dashboard() {
-  const { t, wl } = useLang()
+  const { t } = useLang()
   const [sets, setSets] = useState<SetSummaryDto[]>([])
   const [reminders, setReminders] = useState<ReminderDto[]>([])
   const [loading, setLoading] = useState(true)

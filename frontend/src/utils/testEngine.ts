@@ -48,7 +48,7 @@ export function buildInitialQueue(words: TestWord[]): QueueItem[] {
 
 // ── Character-level diff ──────────────────────────────────────────────────────
 
-export type DiffStatus = 'ok' | 'wrong' | 'missing'
+export type DiffStatus = 'ok' | 'wrong' | 'missing' | 'extra'
 
 export interface DiffChar {
   char: string
