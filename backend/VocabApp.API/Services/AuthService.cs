@@ -66,6 +66,7 @@ public class AuthService(AppDbContext db, IConfiguration config)
 
         var token = new JwtSecurityToken(
             issuer: config["Jwt:Issuer"],
+            audience: "worter-app",
             claims: claims,
             expires: DateTime.UtcNow.AddDays(expiresDays),
             signingCredentials: creds

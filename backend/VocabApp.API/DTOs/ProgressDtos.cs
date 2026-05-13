@@ -1,6 +1,8 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace VocabApp.API.DTOs;
 
-public record RecordSessionRequest(List<Guid> KnownWordIds);
+public record RecordSessionRequest([Required] List<Guid> KnownWordIds);
 
 public record SetProgressDto(
     Guid SetId,

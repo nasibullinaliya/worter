@@ -10,15 +10,15 @@ public record WordDto(
 );
 
 public record CreateWordRequest(
-    [Required] string Term,
-    [Required] string Definition
+    [Required, MaxLength(500)] string Term,
+    [Required, MaxLength(2000)] string Definition
 );
 
 public record CreateWordsRequest(
-    [Required, MinLength(1)] List<CreateWordRequest> Words
+    [Required, MinLength(1), MaxLength(500)] List<CreateWordRequest> Words
 );
 
 public record UpdateWordRequest(
-    [Required] string Term,
-    [Required] string Definition
+    [Required, MaxLength(500)] string Term,
+    [Required, MaxLength(2000)] string Definition
 );

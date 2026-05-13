@@ -31,7 +31,7 @@ public class ExploreController(AppDbContext db) : ControllerBase
             .Where(s => s.IsPublic && s.OwnerId != userId && !savedSetIds.Contains(s.Id));
 
         if (!string.IsNullOrWhiteSpace(q))
-            query = query.Where(s => s.Title.ToLower().Contains(q.ToLower().Trim()));
+            query = query.Where(s => EF.Functions.ILike(s.Title, $"%{q.Trim()}%"));
 
         var totalCount = await query.CountAsync();
 

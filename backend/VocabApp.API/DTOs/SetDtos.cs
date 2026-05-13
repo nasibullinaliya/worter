@@ -4,13 +4,13 @@ namespace VocabApp.API.DTOs;
 
 public record CreateSetRequest(
     [Required, MaxLength(200)] string Title,
-    string? Description,
+    [MaxLength(2000)] string? Description,
     bool IsPublic
 );
 
 public record UpdateSetRequest(
     [Required, MaxLength(200)] string Title,
-    string? Description,
+    [MaxLength(2000)] string? Description,
     bool IsPublic
 );
 

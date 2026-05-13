@@ -17,15 +17,20 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
 var jwtSecret = builder.Configuration["Jwt:Secret"]
     ?? throw new InvalidOperationException("Jwt:Secret is required.");
 
+var jwtIssuer = builder.Configuration["Jwt:Issuer"]
+    ?? throw new InvalidOperationException("Jwt:Issuer is required.");
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(opt =>
     {
         opt.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidateAudience = false,
+            ValidIssuer = jwtIssuer,
+            ValidateAudience = true,
+            ValidAudience = "worter-app",
             ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero,
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
         };
@@ -39,11 +44,11 @@ builder.Services.AddScoped<AuthService>();
 // Controllers
 builder.Services.AddControllers();
 
-// Swagger with Bearer support
+// Swagger (only in Development)
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Vocab App API", Version = "v1" });
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Wörter API", Version = "v1" });
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -77,7 +82,6 @@ builder.Services.AddCors(opt =>
 var app = builder.Build();
 
 // Trust reverse-proxy headers (Render, nginx, etc.)
-// Required so ASP.NET Core uses https:// scheme in generated URLs (Swagger, redirects)
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
@@ -90,8 +94,12 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate();
 }
 
-app.UseSwagger();
-app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Vocab App API v1"));
+// Swagger только в Development
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Wörter API v1"));
+}
 
 app.UseCors();
 app.UseAuthentication();

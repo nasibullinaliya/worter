@@ -2,6 +2,8 @@
 backend/VocabApp.API/bin/
 backend/VocabApp.API/obj/
 *.user
+# Dev appsettings may contain local secrets — never commit
+backend/**/appsettings.Development.json
 
 # Frontend
 frontend/node_modules/
