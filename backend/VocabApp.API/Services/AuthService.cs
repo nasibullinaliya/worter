@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Google.Apis.Auth;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using VocabApp.API.Data;
@@ -11,34 +12,48 @@ namespace VocabApp.API.Services;
 
 public class AuthService(AppDbContext db, IConfiguration config)
 {
-    public async Task<AuthResponse> RegisterAsync(RegisterRequest req)
+    public async Task<AuthResponse> GoogleLoginAsync(string idToken)
     {
-        if (await db.Users.AnyAsync(u => u.Email == req.Email))
-            throw new InvalidOperationException("Email already registered.");
+        var clientId = config["Google:ClientId"]
+            ?? throw new InvalidOperationException("Google:ClientId is not configured.");
 
-        var user = new User
+        GoogleJsonWebSignature.Payload payload;
+        try
         {
-            Id = Guid.NewGuid(),
-            Email = req.Email.ToLower().Trim(),
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.Password),
-            Name = req.Name?.Trim(),
-            CreatedAt = DateTime.UtcNow
-        };
+            payload = await GoogleJsonWebSignature.ValidateAsync(idToken,
+                new GoogleJsonWebSignature.ValidationSettings
+                {
+                    Audience = [clientId]
+                });
+        }
+        catch (InvalidJwtException ex)
+        {
+            throw new UnauthorizedAccessException("Invalid Google token.", ex);
+        }
 
-        db.Users.Add(user);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Email == payload.Email);
+
+        if (user == null)
+        {
+            user = new User
+            {
+                Id = Guid.NewGuid(),
+                Email = payload.Email,
+                GoogleId = payload.Subject,
+                Name = payload.Name,
+                AvatarUrl = payload.Picture,
+                CreatedAt = DateTime.UtcNow
+            };
+            db.Users.Add(user);
+        }
+        else
+        {
+            user.GoogleId ??= payload.Subject;
+            user.Name ??= payload.Name;
+            user.AvatarUrl ??= payload.Picture;
+        }
+
         await db.SaveChangesAsync();
-
-        return new AuthResponse(GenerateToken(user), ToDto(user));
-    }
-
-    public async Task<AuthResponse> LoginAsync(LoginRequest req)
-    {
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Email == req.Email.ToLower().Trim())
-            ?? throw new UnauthorizedAccessException("Invalid credentials.");
-
-        if (!BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash))
-            throw new UnauthorizedAccessException("Invalid credentials.");
-
         return new AuthResponse(GenerateToken(user), ToDto(user));
     }
 
@@ -75,5 +90,5 @@ public class AuthService(AppDbContext db, IConfiguration config)
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    private static UserDto ToDto(User u) => new(u.Id, u.Email, u.Name, u.CreatedAt);
+    private static UserDto ToDto(User u) => new(u.Id, u.Email, u.Name, u.AvatarUrl, u.CreatedAt);
 }

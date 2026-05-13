@@ -18,6 +18,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.HasKey(u => u.Id);
             e.HasIndex(u => u.Email).IsUnique();
+            e.HasIndex(u => u.GoogleId).IsUnique().HasFilter("\"GoogleId\" IS NOT NULL");
             e.Property(u => u.CreatedAt).HasDefaultValueSql("now()");
         });
 

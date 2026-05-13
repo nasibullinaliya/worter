@@ -1,11 +1,10 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { getMe, login as apiLogin, register as apiRegister, type UserDto } from '../api/auth'
+import { getMe, googleLogin as apiGoogleLogin, type UserDto } from '../api/auth'
 
 interface AuthContextValue {
   user: UserDto | null
   isLoading: boolean
-  login: (email: string, password: string) => Promise<void>
-  register: (email: string, password: string, name?: string) => Promise<void>
+  loginWithGoogle: (idToken: string) => Promise<void>
   logout: () => void
 }
 
@@ -27,14 +26,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setIsLoading(false))
   }, [])
 
-  const login = async (email: string, password: string) => {
-    const { token, user } = await apiLogin(email, password)
-    localStorage.setItem('token', token)
-    setUser(user)
-  }
-
-  const register = async (email: string, password: string, name?: string) => {
-    const { token, user } = await apiRegister(email, password, name)
+  const loginWithGoogle = async (idToken: string) => {
+    const { token, user } = await apiGoogleLogin(idToken)
     localStorage.setItem('token', token)
     setUser(user)
   }
@@ -45,7 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, loginWithGoogle, logout }}>
       {children}
     </AuthContext.Provider>
   )

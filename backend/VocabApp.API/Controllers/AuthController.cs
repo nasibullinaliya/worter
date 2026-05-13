@@ -1,7 +1,7 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using VocabApp.API.DTOs;
+using VocabApp.API.Extensions;
 using VocabApp.API.Services;
 
 namespace VocabApp.API.Controllers;
@@ -10,31 +10,17 @@ namespace VocabApp.API.Controllers;
 [Route("api/auth")]
 public class AuthController(AuthService authService) : ControllerBase
 {
-    [HttpPost("register")]
-    public async Task<IActionResult> Register(RegisterRequest req)
+    [HttpPost("google")]
+    public async Task<IActionResult> Google([FromBody] GoogleAuthRequest req)
     {
         try
         {
-            var result = await authService.RegisterAsync(req);
+            var result = await authService.GoogleLoginAsync(req.IdToken);
             return Ok(result);
         }
-        catch (InvalidOperationException ex)
+        catch (UnauthorizedAccessException)
         {
-            return Conflict(new { message = ex.Message });
-        }
-    }
-
-    [HttpPost("login")]
-    public async Task<IActionResult> Login(LoginRequest req)
-    {
-        try
-        {
-            var result = await authService.LoginAsync(req);
-            return Ok(result);
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return Unauthorized(new { message = ex.Message });
+            return Unauthorized(new { message = "Invalid Google token." });
         }
     }
 
@@ -42,7 +28,7 @@ public class AuthController(AuthService authService) : ControllerBase
     [Authorize]
     public async Task<IActionResult> Me()
     {
-        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var userId = User.GetUserId();
         try
         {
             var user = await authService.GetByIdAsync(userId);

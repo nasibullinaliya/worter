@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import { GoogleLogin } from '@react-oauth/google'
 import { useAuth } from '../context/AuthContext'
 import { useLang } from '../context/LangContext'
 import type { Lang } from '../i18n/translations'
@@ -7,24 +8,20 @@ import type { Lang } from '../i18n/translations'
 const LANG_LABELS: Record<Lang, string> = { ru: 'RU', en: 'EN', de: 'DE' }
 
 export default function Login() {
-  const { login } = useAuth()
+  const { loginWithGoogle } = useAuth()
   const { t, lang, setLang } = useLang()
   const navigate = useNavigate()
-
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleGoogleSuccess = async (credential: string) => {
     setError('')
     setLoading(true)
     try {
-      await login(email, password)
+      await loginWithGoogle(credential)
       navigate('/dashboard')
-    } catch (err: any) {
-      setError(err.response?.data?.message ?? t('auth.signingIn'))
+    } catch {
+      setError(t('auth.googleError'))
     } finally {
       setLoading(false)
     }
@@ -32,12 +29,15 @@ export default function Login() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md space-y-8">
+      <div className="w-full max-w-sm space-y-8">
+
+        {/* Logo + title */}
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">Wörter</h1>
-          <p className="mt-2 text-sm text-gray-600">{t('auth.loginTitle')}</p>
-          {/* Language switcher on auth pages */}
-          <div className="mt-3 flex justify-center">
+          <h1 className="text-4xl font-bold tracking-tight text-gray-900">Wörter</h1>
+          <p className="mt-2 text-sm text-gray-500">{t('auth.subtitle')}</p>
+
+          {/* Language switcher */}
+          <div className="mt-4 flex justify-center">
             <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
               {(['ru', 'en', 'de'] as Lang[]).map((l) => (
                 <button
@@ -54,50 +54,36 @@ export default function Login() {
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 rounded-xl bg-white p-8 shadow">
+        {/* Card */}
+        <div className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-gray-900/5">
           {error && (
-            <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+            <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
           )}
 
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Email</label>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-              placeholder="you@example.com"
-            />
-          </div>
+          {loading ? (
+            <div className="flex justify-center py-2">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
+            </div>
+          ) : (
+            <div className="flex justify-center">
+              <GoogleLogin
+                onSuccess={(cred) => {
+                  if (cred.credential) handleGoogleSuccess(cred.credential)
+                }}
+                onError={() => setError(t('auth.googleError'))}
+                theme="outline"
+                size="large"
+                width="280"
+                text="continue_with"
+                shape="rectangular"
+                logo_alignment="left"
+              />
+            </div>
+          )}
+        </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">{t('auth.password')}</label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-              placeholder="••••••"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-indigo-600 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
-          >
-            {loading ? t('auth.signingIn') : t('auth.signIn')}
-          </button>
-
-          <p className="text-center text-sm text-gray-600">
-            {t('auth.noAccount')}{' '}
-            <Link to="/register" className="font-medium text-indigo-600 hover:underline">
-              {t('auth.signUp')}
-            </Link>
-          </p>
-        </form>
       </div>
     </div>
   )
