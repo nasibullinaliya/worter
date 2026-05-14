@@ -1,183 +1,187 @@
 # Database Schema
 
-PostgreSQL. ORM: Entity Framework Core 8. Все `DateTime` поля хранятся как `timestamp with time zone` (UTC).
+PostgreSQL. ORM: Entity Framework Core 8. All `DateTime` fields are stored as `timestamp with time zone` (UTC).
 
 ---
 
-## Диаграмма связей
+## Entity Relationship Diagram
 
 ```
 Users
- ├── WordSets (OwnerId) — наборы, которые пользователь создал
- ├── UserSets (UserId) — чужие наборы, которые пользователь сохранил к себе
- ├── SetProgress (UserId) — прогресс SRS по наборам
- └── WordProgress (UserId) — статистика по отдельным словам
+ ├── WordSets (OwnerId) — sets the user created
+ ├── UserSets (UserId) — public sets the user saved
+ ├── SetProgress (UserId) — SRS progress per set
+ └── WordProgress (UserId) — per-word study statistics
 
 WordSets
- ├── Words (SetId) — слова набора
- ├── UserSets (SetId) — пользователи, сохранившие этот набор
- ├── SetProgress (SetId) — прогресс пользователей по этому набору
+ ├── Words (SetId) — words in the set
+ ├── UserSets (SetId) — users who saved this set
+ ├── SetProgress (SetId) — users' progress on this set
  └── Owner → Users
 
 Words
  ├── Set → WordSets
- └── WordProgress (WordId) — статистика по этому слову
+ └── WordProgress (WordId) — statistics for this word
 ```
 
 ---
 
-## Таблицы
+## Tables
 
 ### `Users`
 
-Пользователи приложения. Авторизация только через Google OAuth.
+Application users. Authentication is via Google OAuth only — no passwords.
 
-| Колонка | Тип | Ограничения | Описание |
+| Column | Type | Constraints | Description |
 |---|---|---|---|
-| `Id` | `uuid` | PK | Уникальный идентификатор пользователя |
-| `Email` | `text` | NOT NULL, UNIQUE | Email из Google аккаунта |
-| `GoogleId` | `text` | UNIQUE, nullable | `sub` из Google ID token. NULL — если пользователь ещё не входил через Google (устаревшие записи) |
-| `Name` | `text` | nullable | Имя из Google профиля |
-| `AvatarUrl` | `text` | nullable | URL аватара из Google профиля |
-| `CreatedAt` | `timestamptz` | NOT NULL, default `now()` | Дата регистрации |
+| `Id` | `uuid` | PK | Unique user identifier |
+| `Email` | `text` | NOT NULL, UNIQUE | Email from Google account |
+| `GoogleId` | `text` | UNIQUE, nullable | `sub` from Google ID token. NULL for legacy records that predate Google auth |
+| `Name` | `text` | nullable | Display name from Google profile |
+| `AvatarUrl` | `text` | nullable | Avatar URL from Google profile |
+| `CreatedAt` | `timestamptz` | NOT NULL, default `now()` | Registration date |
 
-**Индексы:**
-- `IX_Users_Email` — UNIQUE по `Email`
-- `IX_Users_GoogleId` — UNIQUE по `GoogleId` (partial, только где `GoogleId IS NOT NULL`)
+**Indexes:**
+- `IX_Users_Email` — UNIQUE on `Email`
+- `IX_Users_GoogleId` — UNIQUE on `GoogleId` (partial, only where `GoogleId IS NOT NULL`)
 
 ---
 
 ### `WordSets`
 
-Наборы слов (учебные модули). Каждый набор принадлежит одному владельцу.
+Word sets (study modules). Each set belongs to one owner.
 
-| Колонка | Тип | Ограничения | Описание |
+| Column | Type | Constraints | Description |
 |---|---|---|---|
-| `Id` | `uuid` | PK | Уникальный идентификатор набора |
-| `Title` | `text` | NOT NULL | Название набора (макс. 200 символов на уровне API) |
-| `Description` | `text` | nullable | Описание набора (макс. 2000 символов на уровне API) |
-| `IsPublic` | `boolean` | NOT NULL | Если `true` — набор виден всем в разделе «Explore» |
-| `OwnerId` | `uuid` | NOT NULL, FK → `Users.Id` | Владелец набора |
-| `CreatedAt` | `timestamptz` | NOT NULL, default `now()` | Дата создания |
-| `UpdatedAt` | `timestamptz` | NOT NULL, default `now()` | Дата последнего изменения (обновляется вручную при PUT) |
+| `Id` | `uuid` | PK | Unique set identifier |
+| `Title` | `text` | NOT NULL | Set title (max 200 characters at API level) |
+| `Description` | `text` | nullable | Set description (max 2000 characters at API level) |
+| `IsPublic` | `boolean` | NOT NULL | If `true` — the set is visible to everyone in Explore |
+| `OwnerId` | `uuid` | NOT NULL, FK → `Users.Id` | Set owner |
+| `Language` | `text` | NOT NULL, default `'de-DE'` | BCP-47 language tag for TTS. Supported values: `de-DE`, `en-US`, `en-GB`, `fr-FR`, `es-ES`, `it-IT` |
+| `CreatedAt` | `timestamptz` | NOT NULL, default `now()` | Creation date |
+| `UpdatedAt` | `timestamptz` | NOT NULL, default `now()` | Last modified date (updated manually on PUT) |
 
-**Индексы:**
-- `IX_WordSets_OwnerId` — для быстрой выборки наборов пользователя
-- `IX_WordSets_IsPublic` — для фильтрации публичных наборов в Explore
+**Indexes:**
+- `IX_WordSets_OwnerId` — for fast lookup of a user's sets
+- `IX_WordSets_IsPublic` — for filtering public sets in Explore
 
-**Каскадное удаление:** при удалении `Users` → удаляются все `WordSets` владельца.
+**Cascade delete:** deleting `Users` → deletes all `WordSets` owned by that user.
 
 ---
 
 ### `Words`
 
-Слова внутри набора. Каждое слово принадлежит одному набору.
+Words inside a set. Each word belongs to one set.
 
-| Колонка | Тип | Ограничения | Описание |
+| Column | Type | Constraints | Description |
 |---|---|---|---|
-| `Id` | `uuid` | PK | Уникальный идентификатор слова |
-| `Term` | `text` | NOT NULL | Слово / термин (то, что учим) |
-| `Definition` | `text` | NOT NULL | Перевод / определение |
-| `Position` | `integer` | NOT NULL | Порядковый номер слова в наборе (0-based). Используется для сортировки |
-| `SetId` | `uuid` | NOT NULL, FK → `WordSets.Id` | Набор, к которому относится слово |
+| `Id` | `uuid` | PK | Unique word identifier |
+| `Term` | `text` | NOT NULL | Word / term (the thing being learned) |
+| `Definition` | `text` | NOT NULL | Translation / definition |
+| `Position` | `integer` | NOT NULL | Order of the word in the set (0-based), used for sorting |
+| `SetId` | `uuid` | NOT NULL, FK → `WordSets.Id` | Set this word belongs to |
 
-**Индексы:**
-- `IX_Words_SetId` — для быстрой выборки слов набора
+**Indexes:**
+- `IX_Words_SetId` — for fast lookup of words in a set
 
-**Каскадное удаление:** при удалении `WordSets` → удаляются все `Words` набора.
+**Cascade delete:** deleting `WordSets` → deletes all `Words` in that set.
 
 ---
 
 ### `UserSets`
 
-Связь «пользователь сохранил чужой набор к себе». Составной первичный ключ.
+Join table: "user saved someone else's set". Composite primary key.
 
-| Колонка | Тип | Ограничения | Описание |
+| Column | Type | Constraints | Description |
 |---|---|---|---|
-| `UserId` | `uuid` | PK, FK → `Users.Id` | Пользователь, который сохранил набор |
-| `SetId` | `uuid` | PK, FK → `WordSets.Id` | Сохранённый набор |
-| `AddedAt` | `timestamptz` | NOT NULL, default `now()` | Дата добавления набора |
+| `UserId` | `uuid` | PK, FK → `Users.Id` | User who saved the set |
+| `SetId` | `uuid` | PK, FK → `WordSets.Id` | The saved set |
+| `AddedAt` | `timestamptz` | NOT NULL, default `now()` | When the set was saved |
 
-**Первичный ключ:** составной `(UserId, SetId)` — каждый пользователь может добавить набор только один раз.
+**Primary key:** composite `(UserId, SetId)` — each user can save a set only once.
 
-**Индексы:**
-- `IX_UserSets_SetId` — для выборки всех пользователей, сохранивших набор
+**Indexes:**
+- `IX_UserSets_SetId` — for looking up all users who saved a given set
 
-**Каскадное удаление:**
-- при удалении `Users` → удаляются все записи `UserSets` пользователя
-- при удалении `WordSets` → удаляются все записи `UserSets` для этого набора
+**Cascade delete:**
+- deleting `Users` → deletes all `UserSets` records for that user
+- deleting `WordSets` → deletes all `UserSets` records for that set
 
 ---
 
 ### `SetProgress`
 
-Прогресс SRS (Spaced Repetition System) конкретного пользователя по конкретному набору. Запись создаётся при первом прохождении набора.
+SRS (Spaced Repetition System) progress for a specific user on a specific set. Record is created on the user's first study session.
 
-| Колонка | Тип | Ограничения | Описание |
+| Column | Type | Constraints | Description |
 |---|---|---|---|
-| `Id` | `uuid` | PK | Уникальный идентификатор записи |
-| `UserId` | `uuid` | NOT NULL, FK → `Users.Id` | Пользователь |
-| `SetId` | `uuid` | NOT NULL, FK → `WordSets.Id` | Набор |
-| `FirstStudiedAt` | `timestamptz` | NOT NULL | Дата первого прохождения набора. Используется как точка отсчёта для расписания SRS |
-| `LastStudiedAt` | `timestamptz` | NOT NULL | Дата последнего прохождения |
-| `NextReviewAt` | `timestamptz` | nullable | Дата следующего повторения (хранится как полночь UTC). `NULL` — либо цикл завершён (stage 4), либо цикл сброшен (stage 0) |
-| `ReviewStage` | `integer` | NOT NULL | Текущая стадия SRS (см. ниже) |
-| `KnownCount` | `integer` | NOT NULL | Количество слов, которые пользователь отметил как «знаю» в последней сессии |
-| `TotalWords` | `integer` | NOT NULL | Общее количество слов в наборе на момент последней сессии |
+| `Id` | `uuid` | PK | Unique record identifier |
+| `UserId` | `uuid` | NOT NULL, FK → `Users.Id` | User |
+| `SetId` | `uuid` | NOT NULL, FK → `WordSets.Id` | Set |
+| `FirstStudiedAt` | `timestamptz` | NOT NULL | Date of first study session. Used as the reference point for SRS interval calculations |
+| `LastStudiedAt` | `timestamptz` | NOT NULL | Date of most recent study session |
+| `NextReviewAt` | `timestamptz` | nullable | Date of next scheduled review (stored as midnight UTC). `NULL` means either the cycle is complete (stage 4) or the cycle was reset (stage 0) |
+| `ReviewStage` | `integer` | NOT NULL | Current SRS stage (see below) |
+| `KnownCount` | `integer` | NOT NULL | Number of words marked "known" in the last session |
+| `TotalWords` | `integer` | NOT NULL | Total number of words in the set at the time of the last session |
 
-**Индексы:**
-- `IX_SetProgress_UserId_SetId` — UNIQUE. Одна запись прогресса на пару (пользователь, набор)
-- `IX_SetProgress_UserId_NextReviewAt` — для быстрой выборки наборов к повторению (страница «Сегодня»)
-- `IX_SetProgress_SetId` — вспомогательный
+**Indexes:**
+- `IX_SetProgress_UserId_SetId` — UNIQUE. One progress record per (user, set) pair
+- `IX_SetProgress_UserId_NextReviewAt` — for fast lookup of sets due for review (Today page)
+- `IX_SetProgress_SetId` — auxiliary
 
-**Каскадное удаление:**
-- при удалении `Users` → удаляется прогресс
-- при удалении `WordSets` → удаляется прогресс
+**Cascade delete:**
+- deleting `Users` → deletes progress
+- deleting `WordSets` → deletes progress
 
-#### Стадии SRS (`ReviewStage`)
+#### SRS Stages (`ReviewStage`)
 
-| Стадия | Значение | `NextReviewAt` |
+| Stage | Meaning | `NextReviewAt` |
 |---|---|---|
-| `0` | Цикл сброшен (grace period истёк). Нужно начать заново | `NULL` |
-| `1` | Первое прохождение выполнено | `FirstStudiedAt + 1 день` |
-| `2` | Повторение на день 1 выполнено | `FirstStudiedAt + 7 дней` |
-| `3` | Повторение на день 7 выполнено | `FirstStudiedAt + 14 дней` |
-| `4` | Цикл завершён | `NULL` |
+| `0` | Cycle reset (grace period expired) — must start over | `NULL` |
+| `1` | First study session completed | `FirstStudiedAt + 1 day` |
+| `2` | Day-1 review completed | `FirstStudiedAt + 7 days` |
+| `3` | Day-7 review completed | `FirstStudiedAt + 14 days` |
+| `4` | Cycle complete | `NULL` |
 
-**Grace period:** если `NextReviewAt` просрочена более чем на 3 дня — цикл автоматически сбрасывается в стадию 0 при следующем прохождении.
+**Grace period:** if `NextReviewAt` is more than 3 days overdue, the cycle is automatically reset to stage 0 on the next study session.
+
+**No double-advance:** stage advances only if `NextReviewAt.Date <= today`. Multiple sessions on the same day do not advance the stage more than once.
 
 ---
 
 ### `WordProgress`
 
-Статистика по отдельным словам — сколько раз слово было отмечено как «знаю» / «не знаю». Используется в режиме Flashcards.
+Per-word statistics — how many times each word was marked "known" or "unknown". Used for the "weakest words" ranking in TestAll.
 
-| Колонка | Тип | Ограничения | Описание |
+| Column | Type | Constraints | Description |
 |---|---|---|---|
-| `Id` | `uuid` | PK | Уникальный идентификатор записи |
-| `UserId` | `uuid` | NOT NULL, FK → `Users.Id` | Пользователь |
-| `WordId` | `uuid` | NOT NULL, FK → `Words.Id` | Слово |
-| `KnownCount` | `integer` | NOT NULL | Количество раз, когда слово отмечено как «знаю» |
-| `UnknownCount` | `integer` | NOT NULL | Количество раз, когда слово отмечено как «не знаю» |
-| `LastSeenAt` | `timestamptz` | NOT NULL, default `now()` | Дата последнего показа |
+| `Id` | `uuid` | PK | Unique record identifier |
+| `UserId` | `uuid` | NOT NULL, FK → `Users.Id` | User |
+| `WordId` | `uuid` | NOT NULL, FK → `Words.Id` | Word |
+| `KnownCount` | `integer` | NOT NULL | Number of times the word was marked "known" |
+| `UnknownCount` | `integer` | NOT NULL | Number of times the word was marked "unknown" |
+| `LastSeenAt` | `timestamptz` | NOT NULL, default `now()` | Date last shown |
 
-**Индексы:**
-- `IX_WordProgress_UserId_WordId` — UNIQUE. Одна запись на пару (пользователь, слово)
-- `IX_WordProgress_WordId` — вспомогательный
+**Indexes:**
+- `IX_WordProgress_UserId_WordId` — UNIQUE. One record per (user, word) pair
+- `IX_WordProgress_WordId` — auxiliary
 
-**Каскадное удаление:**
-- при удалении `Users` → удаляется статистика
-- при удалении `Words` → удаляется статистика
+**Cascade delete:**
+- deleting `Users` → deletes statistics
+- deleting `Words` → deletes statistics
 
 ---
 
-## Миграции
+## Migrations
 
-| Файл | Что делает |
+| File | What it does |
 |---|---|
-| `20260512122919_InitialCreate` | Создаёт все таблицы и индексы |
-| `20260513092704_AddIsPublicIndex` | Добавляет индекс `IX_WordSets_IsPublic` |
-| `20260513111010_AddGoogleAuth` | Удаляет `PasswordHash`, добавляет `GoogleId` и `AvatarUrl` в `Users` |
-| `20260514000000_FixSetProgressDates` | Data-миграция: исправляет битые записи `SetProgress` (stage=0 + NOT NULL дата; временна́я составляющая в `NextReviewAt`) |
+| `20260512122919_InitialCreate` | Creates all tables and indexes |
+| `20260513092704_AddIsPublicIndex` | Adds index `IX_WordSets_IsPublic` |
+| `20260513111010_AddGoogleAuth` | Removes `PasswordHash`, adds `GoogleId` and `AvatarUrl` to `Users` |
+| `20260514000000_FixSetProgressDates` | Data migration: fixes corrupted `SetProgress` records (stage=0 with non-null date; time component in `NextReviewAt`) |
+| `20260514134800_AddLanguageToWordSets` | Adds `Language` TEXT column to `WordSets`, default `'de-DE'` |
 
-Миграции применяются автоматически при старте API (`db.Database.Migrate()` в `Program.cs`).
+Migrations are applied automatically on API startup (`db.Database.Migrate()` in `Program.cs`).

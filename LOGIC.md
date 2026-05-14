@@ -1,159 +1,186 @@
-# Wörter — Логика приложения
+# Vocab App — Application Logic
 
-## Стек
-- **Backend**: ASP.NET Core 8, EF Core, PostgreSQL, Google.Apis.Auth
-- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Axios
-- **Auth**: Google OAuth (ID Token → backend JWT)
-- **Deploy**: Vercel (frontend) + Render (backend)
-
----
-
-## Аутентификация
-
-1. Пользователь нажимает «Войти через Google» → Google возвращает `id_token`
-2. Frontend отправляет `POST /api/auth/google { idToken }`
-3. Backend валидирует токен через `GoogleJsonWebSignature.ValidateAsync` (проверяет Audience = ClientId)
-4. Находит или создаёт пользователя по email
-5. Возвращает собственный JWT (срок 7 дней), frontend хранит в `localStorage`
-6. При 401 — автоматический редирект на `/login`
+## Stack
+- **Backend**: ASP.NET Core 8, EF Core 8, PostgreSQL, Google.Apis.Auth
+- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS
+- **Auth**: Google OAuth only (ID Token → backend JWT, 7 days)
+- **Deploy**: Vercel (frontend) + Render (backend + PostgreSQL)
 
 ---
 
-## Структура данных
+## Authentication
 
-| Таблица | Назначение |
+1. User clicks "Sign in with Google" → Google returns an `id_token`
+2. Frontend sends `POST /api/auth/google { idToken }`
+3. Backend validates the token via `GoogleJsonWebSignature.ValidateAsync` (checks Audience = ClientId)
+4. Finds or creates a user by email
+5. Returns a signed JWT (7-day expiry); frontend stores it in `localStorage`
+6. On 401 → automatic redirect to `/login`
+
+There is no password-based registration or login.
+
+---
+
+## Data Model Summary
+
+| Table | Purpose |
 |---|---|
-| `Users` | Пользователи (Google ID, email, name, avatar) |
-| `WordSets` | Наборы слов (title, description, isPublic, OwnerId) |
-| `Words` | Слова (term, definition, position, SetId) |
-| `UserSets` | Сохранённые чужие наборы (UserId + SetId) |
-| `SetProgress` | SRS-прогресс по набору (stage, NextReviewAt, FirstStudiedAt) |
-| `WordProgress` | Статистика по каждому слову (known/unknown count) |
+| `Users` | Users (Google ID, email, name, avatar) |
+| `WordSets` | Word sets (title, description, isPublic, language, OwnerId) |
+| `Words` | Words (term, definition, position, SetId) |
+| `UserSets` | Saved sets from other users (UserId + SetId) |
+| `SetProgress` | SRS progress per set (stage, NextReviewAt, FirstStudiedAt) |
+| `WordProgress` | Per-word statistics (known/unknown count) |
+
+The `Language` field on `WordSets` is a BCP-47 tag (default `de-DE`) used to drive browser TTS. Supported values: `de-DE`, `en-US`, `en-GB`, `fr-FR`, `es-ES`, `it-IT`.
 
 ---
 
-## Наборы (WordSets)
+## Sets (WordSets)
 
-### Доступ
-- **Владелец** (`isOwner`): полный доступ — просмотр, редактирование, удаление, изучение
-- **Сохранивший** (`UserSets`): просмотр + изучение (без редактирования)
-- **Публичный набор**: любой залогиненный пользователь может просматривать и сохранить к себе
-- **Приватный чужой**: недоступен (403)
+### Access
+- **Owner** (`isOwner`): full access — view, edit, delete, study
+- **Saved** (`UserSets`): view + study (no editing)
+- **Public set**: any logged-in user can view and save it
+- **Private foreign set**: inaccessible (403)
 
-### Клонирование (`POST /api/sets/{id}/clone`)
-- Создаёт запись в `UserSets` — не копирует слова физически
-- После клонирования пользователь видит набор как «свой сохранённый» и может его изучать
-- Нельзя клонировать свой набор или уже сохранённый
+### Cloning (`POST /api/sets/{id}/clone`)
+- Creates a record in `UserSets` — words are NOT physically copied
+- After cloning, the user sees the set as "saved" and can study it
+- Cannot clone your own set or one already saved
+
+### Removing a saved set (`DELETE /api/sets/{id}/clone`)
+- Removes the `UserSets` record; the original set is not affected
 
 ---
 
-## SRS — повторение по дням
+## SRS — Spaced Repetition
 
-### Интервалы
-```
-Пипсы в UI:   1 / 2 / 7 / 14
-Интервалы:   [1, 7, 14] дней от FirstStudiedAt
-Grace period: 3 дня
-```
+### Intervals (from `FirstStudiedAt`)
 
-### Стадии
-| Stage | Значение | NextReviewAt |
+| Stage | Meaning | NextReviewAt |
 |---|---|---|
-| 0 | Ещё не изучался | null |
-| 1 | Первое изучение | FirstStudiedAt + 1 день |
-| 2 | Повторение на 2-й день | FirstStudiedAt + 7 дней |
-| 3 | Повторение на 7-й день | FirstStudiedAt + 14 дней |
-| 4 | Завершён | null (больше не появляется) |
+| 0 | Reset / never studied | null |
+| 1 | First study session completed | FirstStudiedAt + 1 day |
+| 2 | Day-1 review completed | FirstStudiedAt + 7 days |
+| 3 | Day-7 review completed | FirstStudiedAt + 14 days |
+| 4 | Cycle complete | null (no longer appears) |
 
-### Правила продвижения стадии
-- **Первая сессия** (`SetProgress` не существует) → `StartTracking`: stage=1, NextReviewAt = сегодня+1
-- **Повторные сессии** → `RecordReview`:
-  - Стадия продвигается ТОЛЬКО если `NextReviewAt.Date <= сегодня`
-  - Несколько сессий в один день не дают двойного продвижения
-  - NextReviewAt считается от `FirstStudiedAt`, а не от даты последнего повторения
+### Stage Advancement Rules
+- **First session** (`SetProgress` does not exist yet) → `StartTracking`: stage=1, NextReviewAt = today+1
+- **Repeat sessions** → `RecordReview`:
+  - Stage advances ONLY if `NextReviewAt.Date <= today`
+  - Multiple sessions on the same day do not double-advance
+  - NextReviewAt is calculated from `FirstStudiedAt`, not from the date of the last session
 
-### Grace Period и сброс
-- При каждом запросе `/api/reminders` проверяются просроченные записи
-- Если `NextReviewAt + 3 дня < сегодня` → `Reset`: stage=0, NextReviewAt=null, KnownCount=0
-- После сброса пользователь должен начать цикл заново с нуля
+### Grace Period and Reset
+- On every call to `POST /api/progress/{setId}`, overdue records are checked
+- If `NextReviewAt + 3 days < today` → Reset: stage=0, NextReviewAt=null, KnownCount=0
+- After reset the user must restart the cycle from scratch
 
-### Отображение в Dashboard (пипсы 1/2/7/14)
-- Серый = будущий
-- Жирный тёмный = текущий (пора учить)
-- Жирный зелёный = пройденный
-
----
-
-## Режим изучения (TestRunner)
-
-**Маршрут**: `/sets/:id/test`
-
-### Этапы
-- Слова разбиваются на группы по 10 (STAGE_SIZE)
-- Каждая группа = один этап
-- После каждого этапа — экран с таблицей слов этапа (перевод | слово, ✓ для завершённых)
-
-### Фазы каждого слова
-1. **Choice** — выбор из 4 вариантов
-   - Правильно → переходит в фазу Type в следующем этапе
-   - Неправильно → возвращается в очередь как carry-over (Choice)
-2. **Type** — ввод с клавиатуры
-   - Правильно → слово завершено (`doneIds`)
-   - Неправильно → возвращается в очередь как carry-over (Type)
-
-### Запись прогресса
-- По завершении всех этапов: `POST /api/progress/{setId}` с `knownWordIds` = слова из `doneIds`
-- Обновляет SRS (`SetProgress`) и статистику по словам (`WordProgress`)
+### Dashboard Display (stage pips 1/7/14)
+- Grey = future stage
+- Bold dark = current (due now)
+- Bold green = completed
 
 ---
 
-## Режим теста (QuizRunner)
+## Study Mode — TestRunner
 
-**Маршруты**: `/sets/:id/quiz` (одиночный), `/quiz` (по всем наборам)
+**Routes**: `/sets/:id/test`, and used internally by TestAll weakest-words mode
 
-### Особенности
-- Все слова показываются **одновременно** в виде таблицы
-- Два режима: **ввод ответа** (type) / **выбор из вариантов** (choice)
-- Нет этапов, нет carry-overs
-- **SRS не обновляется** — тест не влияет на прогресс повторений
+### Stages
+- Words are split into groups of 10 (STAGE_SIZE)
+- Each group = one stage
+- After each stage: a summary screen shows the stage's words (translation | term, ✓ for completed)
 
-### Результаты
-- Зелёный ✓ = правильно
-- Красный зачёркнутый = ответ пользователя, под ним — правильный ответ
-- Кнопка «Учить ошибки (N)» → открывает TestRunner только с ошибочными словами
+### Word Phases
+1. **Choice** — pick from 4 options
+   - Correct → moves to the Type phase in the next stage
+   - Incorrect → returned to the queue as a carry-over (Choice)
+2. **Type** — type the answer from memory
+   - Correct → word is done (`doneIds`)
+   - Incorrect → returned to the queue as a carry-over (Type)
 
----
-
-## Страница Today (`/today`)
-
-- Показывает наборы, у которых `NextReviewAt.Date <= сегодня`
-- Кнопка «Начать тест» → `/sets/:id/test`
-- **После прохождения теста** набор исчезает при следующей загрузке страницы (т.к. `NextReviewAt` уходит в будущее)
-- **При просрочке >3 дней**: набор сбрасывается прямо в момент загрузки страницы и **не** отображается
+### Progress Recording
+- On completion of all stages: `POST /api/progress/{setId}` with `knownWordIds` = words in `doneIds`
+- Updates SRS (`SetProgress`) **and** per-word statistics (`WordProgress`)
 
 ---
 
-## TestAll (`/test`) и QuizAll (`/quiz`)
+## Quiz Mode — QuizRunner
 
-- Загружают все слова всех наборов пользователя (`GET /api/sets/all-words`)
-- Выбор наборов через чекбоксы (все выбраны по умолчанию)
-- **SRS не обновляется** — результаты не записываются в базу
-- Это «свободный» режим тренировки вне SRS-цикла
+**Routes**: `/sets/:id/quiz` (single set), used internally by QuizAll
+
+### Behavior
+- All words displayed simultaneously as a table
+- Two sub-modes: **type** (keyboard input) / **choice** (select from options)
+- No stages, no carry-overs
+- **SRS is NOT updated** — quiz does not affect the repetition schedule
+- **WordProgress IS updated** via `POST /api/progress/words`
+
+### Results
+- Green ✓ = correct
+- Red strikethrough = user's wrong answer, correct answer shown below
+- "Study errors (N)" button → opens TestRunner with only the incorrect words
 
 ---
 
-## Публичные наборы (Explore)
+## TestAll (`/test`)
 
-- `GET /api/explore` — поиск по публичным наборам других пользователей
-- Кнопка «+ В мои наборы» → `POST /api/sets/{id}/clone` → запись в `UserSets`
-- **До клонирования**: только просмотр слов, кнопки изучения скрыты
-- **После клонирования**: доступны Карточки, Учить, Тест
+- Loads all words from all user sets (`GET /api/sets/all-words`)
+- User selects sets via checkboxes (all selected by default)
+- User picks a word count N for "weakest words" mode
+
+### Weakest Words Mode
+- `GET /api/progress/weakest-words?setIds=&count=N` returns N words ranked by weakness:
+  1. Words with no `WordProgress` record come first
+  2. Then by lowest known/(known+unknown) ratio
+  3. Then by highest unknown count as a tiebreaker
+- Session runs TestRunner with those words
+- **SRS is NOT updated**
+- **WordProgress IS updated** via `POST /api/progress/words`
 
 ---
 
-## Известные ограничения
+## QuizAll (`/quiz`)
 
-1. **SRS только через TestRunner** — QuizRunner, TestAll, QuizAll не обновляют прогресс
-2. **Изучение ошибок** через QuizRunner («Учить ошибки») тоже не пишет прогресс
-3. **TestAll/QuizAll** не пишут прогресс — используются как свободная тренировка
-4. **Имя/аватар пользователя** не обновляются при смене в Google-аккаунте
+- Loads all words from all user sets (`GET /api/sets/all-words`)
+- Runs QuizRunner across all selected sets
+- **SRS is NOT updated**
+- **WordProgress is NOT updated** — QuizAll records nothing
+
+---
+
+## Today Page (`/today`)
+
+- Shows sets where `NextReviewAt.Date <= today`
+- Data comes from `GET /api/reminders`
+- "Start test" button → `/sets/:id/test`
+- After completing a test the set disappears on next page load (NextReviewAt moves to the future)
+- Sets overdue by >3 days are reset (stage=0) on the next study session; they still appear on Today until studied
+
+---
+
+## Explore (Public Sets)
+
+- `GET /api/explore?q=&page=` — search public sets from other users
+- "+ Add to my sets" button → `POST /api/sets/{id}/clone` → creates a `UserSets` record
+- Before cloning: view-only, study buttons hidden
+- After cloning: Flashcards, Study, Quiz all available
+
+---
+
+## Text-to-Speech
+
+TTS is handled entirely in the browser using the Web Speech API (`SpeechSynthesisUtterance`). The voice language is taken from the set's `Language` field. No backend TTS endpoint exists.
+
+---
+
+## Known Limitations
+
+1. **SRS is only updated by TestRunner** — completing a set via TestRunner (single-set or weakest-words) is the only way to advance the SRS stage
+2. **QuizRunner** updates `WordProgress` but does NOT update SRS
+3. **TestAll** updates `WordProgress` but does NOT update SRS
+4. **QuizAll** updates nothing — purely a free-practice mode
+5. **User name and avatar** are not refreshed if the user changes them in their Google account

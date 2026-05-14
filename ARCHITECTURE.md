@@ -1,36 +1,38 @@
-# Архитектура — Vocab App
+# Architecture — Vocab App
 
-## Обзор
+## Overview
 
-Веб-приложение для изучения слов по методу интервального повторения.
-Бэкенд — ASP.NET Core 8, фронтенд — React + Vite, БД — PostgreSQL, всё запускается через Docker Compose.
+A web application for learning vocabulary using spaced repetition.
+Backend: ASP.NET Core 8. Frontend: React + Vite. Database: PostgreSQL.
 
 ---
 
-## Стек
+## Stack
 
-| Слой | Технология |
-|------|-----------|
-| Frontend | React 18 + Vite + TypeScript |
+| Layer | Technology |
+|---|---|
+| Frontend | React 18 + Vite + TypeScript + Tailwind CSS |
 | Backend | ASP.NET Core 8 Web API |
 | ORM | Entity Framework Core 8 + Npgsql |
-| БД | PostgreSQL 16 |
-| Auth | ASP.NET Core Identity + JWT Bearer |
-| Напоминания | UI-запрос при загрузке дашборда (без фонового сервиса) |
-| Контейнеры | Docker Compose |
+| Database | PostgreSQL (hosted on Render) |
+| Auth | Google OAuth only — `@react-oauth/google` on the frontend, `GoogleJsonWebSignature` on the backend, JWT (7 days) |
+| TTS | Browser Web Speech API (no backend involvement) |
+| Frontend hosting | Vercel |
+| Backend hosting | Render |
+| Local dev DB | Docker Compose (postgres only) |
 
 ---
 
-## Структура репозитория
+## Repository Structure
 
 ```
 vocab-app/
-├── docker-compose.yml
+├── docker-compose.yml          # local dev: postgres only
 ├── .env.example
 ├── ARCHITECTURE.md
-├── PLAN.md
+├── DATABASE.md
+├── LOGIC.md
 ├── backend/
-│   ├── Dockerfile
 │   ├── VocabApp.sln
 │   └── VocabApp.API/
 │       ├── Controllers/
@@ -45,68 +47,78 @@ vocab-app/
 │       │   └── Migrations/
 │       ├── Models/
 │       ├── DTOs/
-│       ├── Services/
-│       │   ├── AuthService.cs
-│       │   ├── SetService.cs
-│       │   ├── ProgressService.cs
-│       │   └── ReviewScheduler.cs
 │       ├── Program.cs
 │       └── appsettings.json
 └── frontend/
-    ├── Dockerfile
     └── src/
         ├── pages/
         │   ├── Dashboard.tsx
         │   ├── SetDetail.tsx
-        │   ├── SetEditor.tsx
+        │   ├── SetNew.tsx
+        │   ├── SetEdit.tsx
         │   ├── Flashcards.tsx
         │   ├── Test.tsx
-        │   └── Explore.tsx
+        │   ├── TestAll.tsx
+        │   ├── Quiz.tsx
+        │   ├── QuizAll.tsx
+        │   ├── Today.tsx
+        │   ├── Explore.tsx
+        │   └── Login.tsx
         ├── components/
+        │   ├── Layout.tsx
+        │   ├── ProgressBar.tsx
+        │   ├── SpeakButton.tsx
+        │   ├── TestRunner.tsx
+        │   ├── QuizRunner.tsx
         │   ├── ReviewBanner.tsx
-        │   ├── FlipCard.tsx
-        │   └── ProgressBar.tsx
+        │   └── StageProgress.tsx
         └── api/
 ```
 
+No `Services/` directory exists in the backend. Business logic lives directly in controllers.
+
 ---
 
-## Схема базы данных
+## Database Models
 
 ### User
-| Поле | Тип | Описание |
-|------|-----|---------|
+| Field | Type | Description |
+|---|---|---|
 | Id | Guid | PK |
-| Email | string | уникальный |
-| PasswordHash | string | bcrypt |
-| Name | string? | отображаемое имя |
+| Email | string | unique |
+| GoogleId | string? | `sub` from Google ID token |
+| Name | string? | display name |
+| AvatarUrl | string? | Google profile photo URL |
 | CreatedAt | DateTime | |
 
 ### WordSet
-| Поле | Тип | Описание |
-|------|-----|---------|
+| Field | Type | Description |
+|---|---|---|
 | Id | Guid | PK |
 | Title | string | |
 | Description | string? | |
-| IsPublic | bool | виден в /explore |
+| IsPublic | bool | visible in Explore |
+| Language | string | BCP-47 tag, default `de-DE`. Used for TTS. |
 | OwnerId | Guid | FK → User |
 | CreatedAt | DateTime | |
 | UpdatedAt | DateTime | |
 
+Supported `Language` values: `de-DE`, `en-US`, `en-GB`, `fr-FR`, `es-ES`, `it-IT`.
+
 ### Word
-| Поле | Тип | Описание |
-|------|-----|---------|
+| Field | Type | Description |
+|---|---|---|
 | Id | Guid | PK |
-| Term | string | слово |
-| Definition | string | перевод / определение |
-| Position | int | порядок в наборе |
+| Term | string | the word being learned |
+| Definition | string | translation / definition |
+| Position | int | order within the set |
 | SetId | Guid | FK → WordSet |
 
 ### UserSet
-Связь "пользователь добавил чужой публичный набор к себе".
+Join table: "user saved someone else's public set".
 
-| Поле | Тип |
-|------|-----|
+| Field | Type |
+|---|---|
 | UserId | Guid |
 | SetId | Guid |
 | AddedAt | DateTime |
@@ -114,30 +126,42 @@ vocab-app/
 PK: (UserId, SetId)
 
 ### SetProgress
-Прогресс пользователя по набору + расписание интервального повторения.
+User's SRS progress on a set.
 
-| Поле | Тип | Описание |
-|------|-----|---------|
+| Field | Type | Description |
+|---|---|---|
 | Id | Guid | PK |
 | UserId | Guid | FK → User |
 | SetId | Guid | FK → WordSet |
-| FirstStudiedAt | DateTime | точка отсчёта интервалов |
+| FirstStudiedAt | DateTime | interval reference point |
 | LastStudiedAt | DateTime | |
-| NextReviewAt | DateTime? | null = курс завершён |
-| ReviewStage | int | 0..4 (интервалы 1,2,4,7,14 дней) |
-| KnownCount | int | слов отмечено «знаю» в последней сессии |
-| TotalWords | int | всего слов в наборе на момент начала |
+| NextReviewAt | DateTime? | null = complete (stage 4) or reset (stage 0) |
+| ReviewStage | int | 0..4 |
+| KnownCount | int | words marked "known" in last session |
+| TotalWords | int | total words in set at time of last session |
 
 Unique: (UserId, SetId)
 
+#### SRS Stages
+
+| Stage | Meaning | NextReviewAt |
+|---|---|---|
+| 0 | Reset / never studied | null |
+| 1 | First study done | FirstStudiedAt + 1 day |
+| 2 | Day-1 review done | FirstStudiedAt + 7 days |
+| 3 | Day-7 review done | FirstStudiedAt + 14 days |
+| 4 | Cycle complete | null |
+
+Grace period: if NextReviewAt is more than 3 days overdue → reset to stage 0 on next session.
+
 ### WordProgress
-| Поле | Тип | Описание |
-|------|-----|---------|
+| Field | Type | Description |
+|---|---|---|
 | Id | Guid | PK |
 | UserId | Guid | FK → User |
 | WordId | Guid | FK → Word |
-| KnownCount | int | сколько раз ответил верно |
-| UnknownCount | int | сколько раз ошибся |
+| KnownCount | int | times marked correct |
+| UnknownCount | int | times marked incorrect |
 | LastSeenAt | DateTime | |
 
 Unique: (UserId, WordId)
@@ -148,96 +172,103 @@ Unique: (UserId, WordId)
 
 ### Auth
 ```
-POST /api/auth/register   — регистрация
-POST /api/auth/login      — логин, возвращает JWT
-GET  /api/auth/me         — текущий пользователь
+POST /api/auth/google     — Google OAuth login/register (body: { idToken })
+GET  /api/auth/me         — current user info
 ```
 
-### Наборы
+### Sets
 ```
-GET    /api/sets              — мои наборы (owned + saved)
-POST   /api/sets              — создать набор
-GET    /api/sets/{id}         — набор со словами
-PUT    /api/sets/{id}         — обновить заголовок, описание, видимость
-DELETE /api/sets/{id}         — удалить (только свой)
-POST   /api/sets/{id}/clone   — добавить чужой публичный набор к себе
-```
-
-### Слова
-```
-POST   /api/sets/{id}/words   — добавить слово или массив слов (импорт)
-PUT    /api/words/{id}        — обновить слово
-DELETE /api/words/{id}        — удалить слово
+GET    /api/sets                  — owned + saved sets with progress
+POST   /api/sets                  — create set (title, description, isPublic, language)
+GET    /api/sets/{id}             — set detail with words
+PUT    /api/sets/{id}             — update set metadata
+DELETE /api/sets/{id}             — delete own set
+GET    /api/sets/all-words        — all words from all user's sets (used by TestAll)
+POST   /api/sets/{id}/clone       — save public set to mine (creates UserSet record)
+DELETE /api/sets/{id}/clone       — remove saved set from mine
 ```
 
-### Прогресс
+### Words
 ```
-POST /api/progress/{setId}    — записать результат сессии
-GET  /api/progress/{setId}    — прогресс по конкретному набору
-```
-
-### Напоминания
-```
-GET /api/reminders            — наборы с next_review_at <= now() для текущего пользователя
+POST   /api/sets/{id}/words       — bulk add words
+PUT    /api/words/{id}            — update word
+DELETE /api/words/{id}            — delete word
 ```
 
-### Публичные наборы
+### Progress
 ```
-GET /api/explore?q=&page=     — поиск публичных наборов других пользователей
+POST /api/progress/{setId}                        — record study session (updates SRS + WordProgress)
+POST /api/progress/words                          — record word-level known/unknown counts (WordProgress only, no SRS)
+GET  /api/progress/weakest-words?setIds=&count=N  — get N weakest words ranked by WordProgress
+```
+
+### Reminders
+```
+GET /api/reminders                — sets with NextReviewAt <= today for the current user
+```
+
+### Explore
+```
+GET /api/explore?q=&page=         — search public sets
 ```
 
 ---
 
-## Логика интервального повторения
+## Authentication Flow
 
-Интервалы (дни от первого прохождения): `[1, 2, 4, 7, 14]`
+1. User clicks "Sign in with Google" → `@react-oauth/google` returns an `id_token`
+2. Frontend sends `POST /api/auth/google { idToken }`
+3. Backend validates the token via `GoogleJsonWebSignature.ValidateAsync` (checks Audience = ClientId)
+4. Finds or creates a user by email
+5. Returns a signed JWT (7-day expiry); frontend stores it in `localStorage`
+6. All subsequent API requests send the JWT as `Authorization: Bearer <token>`
+7. On 401 → automatic redirect to `/login`
 
-```
-При первом завершении набора:
-  FirstStudiedAt = now
-  ReviewStage    = 0
-  NextReviewAt   = FirstStudiedAt + 1 день
-
-После каждого повторения:
-  ReviewStage++
-  if ReviewStage < 5:
-    NextReviewAt = FirstStudiedAt + Intervals[ReviewStage]
-  else:
-    NextReviewAt = null  // все стадии пройдены
-```
-
-Напоминание показывается в UI: при загрузке дашборда фронтенд вызывает `GET /api/reminders` и рендерит `ReviewBanner` со списком наборов к повторению.
+There is no password-based registration or login.
 
 ---
 
-## Режим тестирования
+## Text-to-Speech
 
-- Вопрос: показывается `Term`, нужно выбрать правильный `Definition`.
-- Варианты: 1 правильный + 3 случайных из того же набора (или из всего пула при тесте по всем наборам).
-- После теста: `WordProgress.KnownCount` / `UnknownCount` обновляются, вызывается `POST /api/progress/{setId}`.
+TTS is handled entirely in the browser using the Web Speech API (`SpeechSynthesisUtterance`). The `Language` field of the `WordSet` is passed as the voice language. No backend involvement.
 
 ---
 
-## Импорт слов
+## SRS Logic
 
-Пользователь вставляет текст в формате:
+Intervals from `FirstStudiedAt`:
+- Stage 1 → +1 day
+- Stage 2 → +7 days
+- Stage 3 → +14 days
+- Stage 4 → null (done)
+
+Stage advances only if `NextReviewAt.Date <= today`. Multiple sessions on the same day do not double-advance. Grace period: >3 days overdue → reset to stage 0.
+
+---
+
+## Word Import
+
+The user pastes text in the format:
 ```
 apple - яблоко
 banana - банан
 ```
-или с табуляцией (совместимость с Quizlet):
+or tab-separated (Quizlet-compatible):
 ```
 apple	яблоко
 banana	банан
 ```
 
-Парсер (фронтенд): построчно → split по первому `-` или `\t` → массив `{term, definition}` → `POST /api/sets/{id}/words`.
+Frontend parser: line-by-line → split on first `-` or `\t` → array of `{term, definition}` → `POST /api/sets/{id}/words`.
 
 ---
 
-## Docker Compose
+## Local Development
+
+Docker Compose is used **only** for running a local PostgreSQL instance. The backend and frontend are run directly (not in Docker) in local development. Production deployments do not use Docker.
 
 ```yaml
+# docker-compose.yml — local postgres only
 services:
   postgres:
     image: postgres:16-alpine
@@ -250,37 +281,8 @@ services:
     ports:
       - "5432:5432"
 
-  api:
-    build: ./backend
-    depends_on:
-      - postgres
-    environment:
-      ConnectionStrings__Default: Host=postgres;Database=vocab;Username=vocab;Password=vocab
-      Jwt__Secret: changeme-32-chars-minimum-here!!
-      Jwt__Issuer: vocab-app
-      ASPNETCORE_ENVIRONMENT: Development
-    ports:
-      - "5000:8080"
-
-  web:
-    build: ./frontend
-    depends_on:
-      - api
-    environment:
-      VITE_API_URL: http://localhost:5000
-    ports:
-      - "5173:5173"
-
 volumes:
   postgres_data:
 ```
 
-### Запуск
-```bash
-docker compose up --build
-docker compose exec api dotnet ef database update
-
-# фронтенд: http://localhost:5173
-# api:      http://localhost:5000
-# swagger:  http://localhost:5000/swagger
-```
+Migrations are applied automatically on API startup (`db.Database.Migrate()` in `Program.cs`).

@@ -5,6 +5,8 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VocabApp.API", "VocabApp.API\VocabApp.API.csproj", "{9DFABBFC-4DB2-4481-AF6A-AA7D5BB98BD3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VocabApp.Tests", "VocabApp.Tests\VocabApp.Tests.csproj", "{746B6795-AC9B-448A-BBB8-2CAD0A79D326}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{9DFABBFC-4DB2-4481-AF6A-AA7D5BB98BD3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9DFABBFC-4DB2-4481-AF6A-AA7D5BB98BD3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9DFABBFC-4DB2-4481-AF6A-AA7D5BB98BD3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{746B6795-AC9B-448A-BBB8-2CAD0A79D326}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{746B6795-AC9B-448A-BBB8-2CAD0A79D326}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{746B6795-AC9B-448A-BBB8-2CAD0A79D326}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{746B6795-AC9B-448A-BBB8-2CAD0A79D326}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
