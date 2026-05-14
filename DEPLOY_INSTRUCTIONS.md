@@ -3,7 +3,7 @@
 ## Фронтенд — Vercel (через терминал)
 
 ```bash
-cd /Users/aliianasibullina/vocab-app/frontend
+cd /Users/aliianasibullina/vocab-app
 vercel --prod
 ```
 
@@ -29,8 +29,7 @@ git add -A
 git commit -m "описание изменений"
 git push origin main
 
-# 2. Задеплоить фронтенд
-cd frontend
+# 2. Задеплоить фронтенд (запускать из корня репозитория)
 vercel --prod
 ```
 
