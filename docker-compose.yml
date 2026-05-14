@@ -28,6 +28,7 @@ services:
       Frontend__Url: http://localhost:5173
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
+      Google__ClientId: 766898105584-ai5qblsd4lqgteemj1qa4270du3n74mr.apps.googleusercontent.com
     ports:
       - "5050:8080"
 
@@ -37,6 +38,7 @@ services:
       - api
     environment:
       VITE_API_URL: http://localhost:5050
+      VITE_GOOGLE_CLIENT_ID: 766898105584-ai5qblsd4lqgteemj1qa4270du3n74mr.apps.googleusercontent.com
     ports:
       - "5173:5173"
     volumes:
