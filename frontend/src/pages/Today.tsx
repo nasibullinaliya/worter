@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { getReminders, type ReminderDto } from '../api/sets'
 import { Layout } from '../components/Layout'
 import { useLang } from '../context/LangContext'
 
 export default function Today() {
   const { t, wl } = useLang()
-  const navigate = useNavigate()
   const [reminders, setReminders] = useState<ReminderDto[] | null>(null)
   const [loading, setLoading] = useState(true)
 
