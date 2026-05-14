@@ -59,6 +59,9 @@ export const deleteSet = (id: string) =>
 export const cloneSet = (id: string) =>
   client.post(`/api/sets/${id}/clone`)
 
+export const uncloneSet = (id: string) =>
+  client.delete(`/api/sets/${id}/clone`)
+
 export const addWords = (setId: string, words: { term: string; definition: string }[]) =>
   client.post<WordDto[]>(`/api/sets/${setId}/words`, { words }).then((r) => r.data)
 

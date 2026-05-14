@@ -172,4 +172,17 @@ public class SetsController(AppDbContext db) : ControllerBase
         await db.SaveChangesAsync();
         return Ok();
     }
+
+    // DELETE /api/sets/{id}/clone — убрать чужой набор из своих
+    [HttpDelete("{id:guid}/clone")]
+    public async Task<IActionResult> Uncollect(Guid id)
+    {
+        var userId = User.GetUserId();
+        var userSet = await db.UserSets.FindAsync(userId, id);
+        if (userSet == null) return NotFound();
+
+        db.UserSets.Remove(userSet);
+        await db.SaveChangesAsync();
+        return NoContent();
+    }
 }

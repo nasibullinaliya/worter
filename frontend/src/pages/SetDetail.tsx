@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { getSet, deleteSet, cloneSet, type SetDetailDto } from '../api/sets'
+import { getSet, deleteSet, cloneSet, uncloneSet, type SetDetailDto } from '../api/sets'
 import { Layout } from '../components/Layout'
 import { SpeakButton } from '../components/SpeakButton'
 import { useLang } from '../context/LangContext'
@@ -13,11 +13,15 @@ export default function SetDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [cloneStatus, setCloneStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [removing, setRemoving] = useState(false)
 
   useEffect(() => {
     if (!id) return
     getSet(id)
-      .then(setSet)
+      .then((s) => {
+        setSet(s)
+        if (s.isSaved) setCloneStatus('saved')
+      })
       .catch(() => setError(t('set.notFound')))
       .finally(() => setLoading(false))
   }, [id])
@@ -38,6 +42,17 @@ export default function SetDetail() {
       const msg = err.response?.data?.message ?? ''
       if (msg.includes('уже добавлен')) setCloneStatus('saved')
       else setCloneStatus('idle')
+    }
+  }
+
+  const handleUnclone = async () => {
+    if (!set) return
+    setRemoving(true)
+    try {
+      await uncloneSet(set.id)
+      navigate('/dashboard')
+    } catch {
+      setRemoving(false)
     }
   }
 
@@ -77,21 +92,22 @@ export default function SetDetail() {
         </div>
 
         <div className="flex gap-2">
-          {!set.isOwner && (
+          {!set.isOwner && cloneStatus !== 'saved' && (
             <button
               onClick={handleClone}
-              disabled={cloneStatus !== 'idle'}
-              className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-                cloneStatus === 'saved'
-                  ? 'bg-green-100 text-green-700 cursor-default'
-                  : 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50'
-              }`}
+              disabled={cloneStatus === 'saving'}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
             >
-              {cloneStatus === 'saved'
-                ? t('set.added')
-                : cloneStatus === 'saving'
-                ? '...'
-                : t('set.addToMine')}
+              {cloneStatus === 'saving' ? '...' : t('set.addToMine')}
+            </button>
+          )}
+          {!set.isOwner && cloneStatus === 'saved' && (
+            <button
+              onClick={handleUnclone}
+              disabled={removing}
+              className="rounded-lg border border-red-200 px-4 py-2 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+            >
+              {removing ? '...' : t('set.removeFromMine')}
             </button>
           )}
 
