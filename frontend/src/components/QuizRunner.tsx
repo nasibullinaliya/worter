@@ -242,14 +242,14 @@ export function QuizRunner({
                     className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
                   />
                 ) : (
-                  <div className="flex flex-wrap gap-1.5 self-center">
+                  <div className="flex flex-col gap-1.5">
                     {(choices[word.wordId] ?? []).map((choice) => (
                       <button
                         key={choice}
                         onClick={() =>
                           setSelectedChoices((prev) => ({ ...prev, [word.wordId]: choice }))
                         }
-                        className={`rounded-lg border px-3 py-1 text-xs font-medium transition-colors ${
+                        className={`rounded-lg border px-3 py-1.5 text-left text-sm font-medium transition-colors ${
                           selectedChoices[word.wordId] === choice
                             ? 'border-indigo-600 bg-indigo-600 text-white'
                             : 'border-gray-300 text-gray-700 hover:bg-gray-50'
