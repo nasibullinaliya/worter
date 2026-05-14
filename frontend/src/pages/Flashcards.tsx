@@ -35,10 +35,12 @@ export default function Flashcards() {
 
   useEffect(() => {
     if (!id) return
-    getSet(id).then((s) => {
-      setSet(s)
-      setCards(shuffle(s.words))
-    }).finally(() => setLoading(false))
+    getSet(id)
+      .then((s) => {
+        setSet(s)
+        setCards(shuffle(s.words))
+      })
+      .finally(() => setLoading(false))
   }, [id])
 
   // Auto-play term when card changes
@@ -117,14 +119,14 @@ export default function Flashcards() {
   if (loading) return (
     <Layout>
       <div className="flex justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-violet-600 border-t-transparent" />
       </div>
     </Layout>
   )
 
   if (!set || set.words.length === 0) return (
     <Layout>
-      <p className="text-gray-500">{t('fc.noWords')}</p>
+      <p className="text-gray-400">{t('fc.noWords')}</p>
     </Layout>
   )
 
@@ -133,10 +135,30 @@ export default function Flashcards() {
     return (
       <Layout>
         <div className="mx-auto max-w-md py-10 text-center">
-          <div className="mb-6 text-5xl">{knownCount === total ? '🎉' : knownCount >= total / 2 ? '👍' : '📚'}</div>
+          <div className="mb-6 flex justify-center">
+            {knownCount === total ? (
+              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+                <svg className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </span>
+            ) : knownCount >= total / 2 ? (
+              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-violet-100">
+                <svg className="h-8 w-8 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </span>
+            ) : (
+              <span className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
+                <svg className="h-8 w-8 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+              </span>
+            )}
+          </div>
           <h2 className="mb-2 text-2xl font-bold text-gray-900">{t('fc.sessionDone')}</h2>
           <p className="mb-6 text-gray-500">
-            {t('fc.known')} <strong className="text-indigo-600">{knownCount}</strong>{' '}
+            {t('fc.known')} <strong className="text-violet-600">{knownCount}</strong>{' '}
             {t('common.outOf')} {total}
           </p>
           <ProgressBar known={knownCount} total={total} className="mb-8" />
@@ -153,13 +175,13 @@ export default function Flashcards() {
           <div className="flex justify-center gap-3">
             <button
               onClick={restart}
-              className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+              className="rounded-full bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-5 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity transition-colors"
             >
               {t('fc.restart')}
             </button>
             <Link
               to={`/sets/${id}`}
-              className="rounded-lg border border-gray-300 px-5 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              className="rounded-full border border-gray-200 px-5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
             >
               {t('common.backToSet')}
             </Link>
@@ -173,10 +195,12 @@ export default function Flashcards() {
     <Layout>
       <div className="mx-auto max-w-lg">
         <div className="mb-4 flex items-center justify-between">
-          <Link to={`/sets/${id}`} className="text-sm text-gray-500 hover:text-gray-700">
+          <Link to={`/sets/${id}`} className="text-sm font-medium text-gray-400 hover:text-gray-600 transition-colors">
             ← {set.title}
           </Link>
-          <span className="text-sm text-gray-500">{index + 1} / {total}</span>
+          <span className="text-sm text-gray-400">
+            {index + 1} / {total}
+          </span>
         </div>
 
         <ProgressBar known={known.size} total={total} className="mb-3" />
@@ -187,7 +211,7 @@ export default function Flashcards() {
             onClick={toggleAutoPlay}
             className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
               autoPlay
-                ? 'bg-indigo-100 text-indigo-700'
+                ? 'bg-violet-100 text-violet-700'
                 : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600'
             }`}
           >
@@ -204,20 +228,20 @@ export default function Flashcards() {
           onClick={() => setFlipped(!flipped)}
         >
           <div className={`flip-inner ${flipped ? 'flipped' : ''}`}>
-            <div className="flip-front flex flex-col items-center justify-center rounded-2xl border bg-white p-8 shadow-md">
-              <p className="mb-2 text-xs uppercase tracking-wide text-gray-400">{t('fc.word')}</p>
+            <div className="flip-front flex flex-col items-center justify-center rounded-2xl border border-gray-100 bg-white p-8 shadow-md">
+              <p className="mb-2 text-xs uppercase tracking-wide text-gray-300">{t('fc.word')}</p>
               <div className="flex items-center gap-2">
                 <p className="text-center text-3xl font-bold text-gray-900">{current?.term}</p>
                 {current && <SpeakButton text={current.term} lang={set?.language} className="text-gray-400" />}
               </div>
-              <p className="mt-4 text-xs text-gray-400">{t('fc.flipHint')}</p>
+              <p className="mt-4 text-xs text-gray-300">{t('fc.flipHint')}</p>
             </div>
 
-            <div className="flip-back flex flex-col items-center justify-center rounded-2xl border bg-indigo-50 p-8 shadow-md">
-              <p className="mb-2 text-xs uppercase tracking-wide text-indigo-400">{t('fc.translation')}</p>
+            <div className="flip-back flex flex-col items-center justify-center rounded-2xl border border-violet-100 bg-violet-50 p-8 shadow-md">
+              <p className="mb-2 text-xs uppercase tracking-wide text-violet-400">{t('fc.translation')}</p>
               <div className="flex items-center gap-2">
-                <p className="text-center text-3xl font-bold text-indigo-900">{current?.definition}</p>
-                {current && <SpeakButton text={current.definition} className="text-indigo-300" />}
+                <p className="text-center text-3xl font-bold text-violet-900">{current?.definition}</p>
+                {current && <SpeakButton text={current.definition} className="text-violet-300" />}
               </div>
             </div>
           </div>
@@ -226,17 +250,17 @@ export default function Flashcards() {
         <div className="flex gap-4">
           <button
             onClick={() => flash('unknown', false)}
-            className={`flex-1 rounded-xl border-2 py-3 text-sm font-semibold transition-colors ${
+            className={`flex-1 rounded-2xl border-2 py-3 text-sm font-semibold transition-colors ${
               pressed === 'unknown'
                 ? 'border-red-400 bg-red-100 text-red-700'
-                : 'border-red-200 text-red-600 hover:bg-red-50'
+                : 'border-red-200 text-red-500 hover:bg-red-50'
             }`}
           >
             ← {t('fc.dontKnow')}
           </button>
           <button
             onClick={() => flash('known', true)}
-            className={`flex-1 rounded-xl border-2 py-3 text-sm font-semibold transition-colors ${
+            className={`flex-1 rounded-2xl border-2 py-3 text-sm font-semibold transition-colors ${
               pressed === 'known'
                 ? 'border-green-400 bg-green-100 text-green-700'
                 : 'border-green-200 text-green-600 hover:bg-green-50'
@@ -246,7 +270,9 @@ export default function Flashcards() {
           </button>
         </div>
 
-        {saving && <p className="mt-4 text-center text-sm text-gray-400">{t('fc.saving')}</p>}
+        {saving && (
+          <p className="mt-4 text-center text-sm text-gray-400">{t('fc.saving')}</p>
+        )}
       </div>
     </Layout>
   )

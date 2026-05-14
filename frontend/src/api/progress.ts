@@ -52,3 +52,11 @@ export const getWeakestWords = (setIds: string[], count: number) =>
 
 export const getAllWords = () =>
   client.get<AllWordsItemDto[]>('/api/sets/all-words').then((r) => r.data)
+
+export interface WeeklyDayDto {
+  date: string
+  wordCount: number
+}
+
+export const getWeeklyProgress = () =>
+  client.get<WeeklyDayDto[]>('/api/progress/weekly').then((r) => r.data)

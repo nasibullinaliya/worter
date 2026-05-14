@@ -12,13 +12,15 @@ export function ProgressBar({ known, total, className = '' }: ProgressBarProps) 
 
   return (
     <div className={`space-y-1 ${className}`}>
-      <div className="flex justify-between text-xs text-gray-500">
-        <span>{known} / {total} {t('dashboard.known')}</span>
-        <span>{pct}%</span>
+      <div className="flex items-center justify-between text-xs text-gray-500">
+        <span className="font-medium">
+          {known} / {total} {t('dashboard.known')}
+        </span>
+        <span className="text-gray-400">{pct}%</span>
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+      <div className="h-2 w-full overflow-hidden rounded-full bg-indigo-100/60">
         <div
-          className="h-full rounded-full bg-indigo-500 transition-all duration-500"
+          className="h-full rounded-full bg-gradient-to-r from-indigo-600 to-violet-400 transition-all duration-500"
           style={{ width: `${pct}%` }}
         />
       </div>

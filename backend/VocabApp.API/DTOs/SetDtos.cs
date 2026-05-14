@@ -33,7 +33,8 @@ public record SetSummaryDto(
     DateTime CreatedAt,
     DateTime UpdatedAt,
     SetProgressSummary? Progress,
-    string Language = "de-DE"
+    string Language = "de-DE",
+    string? AuthorName = null
 );
 
 public record SetDetailDto(
@@ -46,7 +47,8 @@ public record SetDetailDto(
     DateTime CreatedAt,
     DateTime UpdatedAt,
     List<WordDto> Words,
-    string Language = "de-DE"
+    string Language = "de-DE",
+    string? AuthorName = null
 );
 
 public record ExploreItemDto(

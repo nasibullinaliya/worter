@@ -52,7 +52,7 @@ export default function QuizAll() {
   if (loading) return (
     <Layout>
       <div className="flex justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-violet-600 border-t-transparent" />
       </div>
     </Layout>
   )
@@ -61,7 +61,7 @@ export default function QuizAll() {
     <Layout>
       <div className="mx-auto max-w-md py-12 text-center">
         <p className="mb-4 text-gray-500">{error || t('test.loadError')}</p>
-        <Link to="/dashboard" className="text-sm text-indigo-600 hover:underline">← {t('test.home')}</Link>
+        <Link to="/dashboard" className="text-sm text-violet-600 hover:underline">← {t('test.home')}</Link>
       </div>
     </Layout>
   )
@@ -106,7 +106,7 @@ export default function QuizAll() {
             <p className="text-sm font-medium text-gray-700">{t('test.selectSets')}</p>
             <button
               onClick={() => setSelectedSetIds(allSelected ? new Set() : new Set(sets.map((s) => s.setId)))}
-              className="text-xs text-indigo-600 hover:underline"
+              className="text-xs text-violet-600 hover:underline"
             >
               {allSelected ? t('test.deselectAll') : t('test.selectAll')}
             </button>
@@ -118,7 +118,7 @@ export default function QuizAll() {
                   type="checkbox"
                   checked={selectedSetIds.has(s.setId)}
                   onChange={() => toggleSet(s.setId)}
-                  className="h-4 w-4 rounded border-gray-300 accent-indigo-600"
+                  className="h-4 w-4 rounded border-gray-300 accent-violet-600"
                 />
                 <span className="flex-1 text-sm text-gray-800">{s.setTitle}</span>
                 <span className="text-xs text-gray-400">{s.words.length} {wl(s.words.length)}</span>
@@ -134,7 +134,7 @@ export default function QuizAll() {
         <button
           onClick={() => setSessionWords(shuffle(selectedWords))}
           disabled={selectedSetIds.size === 0 || selectedWords.length < 1}
-          className="w-full rounded-lg bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-40"
+          className="w-full rounded-lg bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-40"
         >
           {t('quiz.startBtn')} ({selectedWords.length} {wl(selectedWords.length)})
         </button>

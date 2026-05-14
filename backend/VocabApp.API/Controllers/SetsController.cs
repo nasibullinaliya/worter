@@ -38,11 +38,11 @@ public class SetsController(AppDbContext db) : ControllerBase
 
         var saved = await db.UserSets
             .Where(us => us.UserId == userId)
-            .Select(us => new { us.Set.Id, us.Set.Title, us.Set.Description, us.Set.IsPublic, us.Set.Language, us.Set.CreatedAt, us.Set.UpdatedAt, WordCount = us.Set.Words.Count })
+            .Select(us => new { us.Set.Id, us.Set.Title, us.Set.Description, us.Set.IsPublic, us.Set.Language, us.Set.CreatedAt, us.Set.UpdatedAt, WordCount = us.Set.Words.Count, AuthorName = us.Set.Owner.Name ?? us.Set.Owner.Email })
             .ToListAsync();
 
         var result = owned.Select(s => new SetSummaryDto(s.Id, s.Title, s.Description, s.IsPublic, true, s.WordCount, s.CreatedAt, s.UpdatedAt, GetProgress(s.Id), s.Language))
-            .Concat(saved.Select(s => new SetSummaryDto(s.Id, s.Title, s.Description, s.IsPublic, false, s.WordCount, s.CreatedAt, s.UpdatedAt, GetProgress(s.Id), s.Language)))
+            .Concat(saved.Select(s => new SetSummaryDto(s.Id, s.Title, s.Description, s.IsPublic, false, s.WordCount, s.CreatedAt, s.UpdatedAt, GetProgress(s.Id), s.Language, s.AuthorName)))
             .OrderByDescending(s => s.CreatedAt);
 
         return Ok(result);
@@ -83,6 +83,7 @@ public class SetsController(AppDbContext db) : ControllerBase
 
         var set = await db.WordSets
             .Include(s => s.Words.OrderBy(w => w.Position))
+            .Include(s => s.Owner)
             .FirstOrDefaultAsync(s => s.Id == id);
 
         if (set == null) return NotFound();
@@ -94,10 +95,11 @@ public class SetsController(AppDbContext db) : ControllerBase
             return Forbid();
 
         var words = set.Words.Select(w => new WordDto(w.Id, w.Term, w.Definition, w.Position)).ToList();
+        var authorName = isOwner ? null : (set.Owner.Name ?? set.Owner.Email);
 
         return Ok(new SetDetailDto(
             set.Id, set.Title, set.Description, set.IsPublic, isOwner, isSaved,
-            set.CreatedAt, set.UpdatedAt, words, set.Language));
+            set.CreatedAt, set.UpdatedAt, words, set.Language, authorName));
     }
 
     // PUT /api/sets/{id}

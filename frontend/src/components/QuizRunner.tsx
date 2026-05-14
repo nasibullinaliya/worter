@@ -148,7 +148,7 @@ export function QuizRunner({
                 onClick={() => setMode(m)}
                 className={`flex-1 rounded-lg border py-2 text-sm font-medium transition-colors ${
                   mode === m
-                    ? 'border-indigo-600 bg-indigo-600 text-white'
+                    ? 'border-violet-600 bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] text-white'
                     : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
               >
@@ -168,7 +168,7 @@ export function QuizRunner({
                 onClick={() => setDirection(d)}
                 className={`flex-1 rounded-lg border py-2 text-sm font-medium transition-colors ${
                   direction === d
-                    ? 'border-indigo-600 bg-indigo-600 text-white'
+                    ? 'border-violet-600 bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] text-white'
                     : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
               >
@@ -181,7 +181,7 @@ export function QuizRunner({
         <button
           onClick={handleStart}
           disabled={words.length < 1}
-          className="w-full rounded-lg bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-40"
+          className="w-full rounded-lg bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-40"
         >
           {t('quiz.startBtn')} ({words.length} {wl(words.length)})
         </button>
@@ -239,7 +239,7 @@ export function QuizRunner({
                       if (e.key === 'Enter' && isLast) handleCheck()
                     }}
                     placeholder={t('test.placeholder')}
-                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                    className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-100"
                   />
                 ) : (
                   <div className="flex flex-col gap-1.5">
@@ -251,7 +251,7 @@ export function QuizRunner({
                         }
                         className={`rounded-lg border px-3 py-1.5 text-left text-sm font-medium transition-colors ${
                           selectedChoices[word.wordId] === choice
-                            ? 'border-indigo-600 bg-indigo-600 text-white'
+                            ? 'border-violet-600 bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] text-white'
                             : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                         }`}
                       >
@@ -268,7 +268,7 @@ export function QuizRunner({
         <button
           onClick={handleCheck}
           disabled={!allAnswered}
-          className="w-full rounded-lg bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-40"
+          className="w-full rounded-lg bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-40"
         >
           {t('quiz.checkBtn')}
         </button>
@@ -354,7 +354,7 @@ export function QuizRunner({
         {wrongWords.length > 0 && (
           <button
             onClick={() => setStudyingMistakes(true)}
-            className="flex-1 rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700"
+            className="flex-1 rounded-lg bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
           >
             {t('quiz.studyMistakes')} ({wrongWords.length})
           </button>

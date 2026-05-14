@@ -326,7 +326,7 @@ export function TestRunner({
                 onClick={() => setDirection(d)}
                 className={`flex-1 rounded-lg border py-2 text-sm font-medium transition-colors ${
                   direction === d
-                    ? 'border-indigo-600 bg-indigo-600 text-white'
+                    ? 'border-violet-600 bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] text-white'
                     : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
               >
@@ -340,7 +340,7 @@ export function TestRunner({
 
         <button
           onClick={start}
-          className="w-full rounded-lg bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700"
+          className="w-full rounded-lg bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
         >
           {t('test.startBtn')} ({total} {wl(total)})
         </button>
@@ -407,7 +407,7 @@ export function TestRunner({
               continueToNextStage()
             }
           }}
-          className="w-full rounded-lg bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700"
+          className="w-full rounded-lg bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
         >
           {hasMoreStages ? t('test.continueNext') : t('test.finish')}
         </button>
@@ -422,13 +422,31 @@ export function TestRunner({
     const score = doneIds.size
     return (
       <div className="mx-auto max-w-md py-10 text-center">
-        <div className="mb-6 text-5xl">
-          {score === total ? '🏆' : score >= total / 2 ? '👍' : '📖'}
+        <div className="mb-6 flex justify-center">
+          {score === total ? (
+            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+              <svg className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </span>
+          ) : score >= total / 2 ? (
+            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-violet-100">
+              <svg className="h-8 w-8 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </span>
+          ) : (
+            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
+              <svg className="h-8 w-8 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+            </span>
+          )}
         </div>
         <h2 className="mb-2 text-2xl font-bold text-gray-900">{t('test.done')}</h2>
         <p className="mb-6 text-gray-500">
           {t('test.correctlyWritten')}{' '}
-          <strong className="text-indigo-600">{score}</strong> {t('common.outOf')}{' '}
+          <strong className="text-violet-600">{score}</strong> {t('common.outOf')}{' '}
           {total}
         </p>
         <ProgressBar known={score} total={total} className="mb-8" />
@@ -445,7 +463,7 @@ export function TestRunner({
         <div className="flex justify-center gap-3">
           <button
             onClick={start}
-            className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+            className="rounded-lg bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-5 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
           >
             {t('test.retake')}
           </button>
@@ -536,7 +554,7 @@ export function TestRunner({
             const isSelected = choice === choiceSelected
 
             let style =
-              'border-gray-200 text-gray-800 hover:border-indigo-400 hover:bg-indigo-50'
+              'border-gray-200 text-gray-800 hover:border-violet-400 hover:bg-violet-50'
             if (choiceSelected !== null) {
               if (isCorrect) style = 'border-green-400 bg-green-50 text-green-800'
               else if (isSelected) style = 'border-red-400 bg-red-50 text-red-800'
@@ -574,7 +592,7 @@ export function TestRunner({
                   handleNext()
                 }
               }}
-              className="mt-2 w-full rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700"
+              className="mt-2 w-full rounded-xl bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
             >
               {t('test.next')}
             </button>
@@ -620,7 +638,7 @@ export function TestRunner({
                     handleNext()
                   }
                 }}
-                className="w-full rounded-xl bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700"
+                className="w-full rounded-xl bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
               >
                 {t('test.next')}
               </button>
@@ -635,12 +653,12 @@ export function TestRunner({
                   onChange={(e) => setTypeInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleTypeSubmit()}
                   placeholder={t('test.placeholder')}
-                  className="flex-1 rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                  className="flex-1 rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-100"
                 />
                 <button
                   onClick={handleTypeSubmit}
                   disabled={typeInput.trim() === ''}
-                  className="rounded-xl bg-indigo-600 px-5 py-3 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-40"
+                  className="rounded-xl bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-5 py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-40"
                 >
                   {t('test.ok')}
                 </button>
@@ -654,7 +672,7 @@ export function TestRunner({
                   {t('test.showHint')}
                 </button>
               ) : (
-                <p className="mt-3 font-mono text-sm text-indigo-500">{hint}</p>
+                <p className="mt-3 font-mono text-sm text-violet-500">{hint}</p>
               )}
             </>
           )}

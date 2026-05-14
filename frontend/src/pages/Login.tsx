@@ -28,23 +28,25 @@ export default function Login() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-sm space-y-8">
 
         {/* Logo + title */}
         <div className="text-center">
-          <h1 className="text-4xl font-bold tracking-tight text-gray-900">Wörter</h1>
+          <h1 className="text-5xl font-extrabold tracking-tight bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] bg-clip-text text-transparent">Wörter</h1>
           <p className="mt-2 text-sm text-gray-500">{t('auth.subtitle')}</p>
 
           {/* Language switcher */}
           <div className="mt-4 flex justify-center">
-            <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
+            <div className="flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2 py-1 text-xs">
               {(['ru', 'en', 'de'] as Lang[]).map((l) => (
                 <button
                   key={l}
                   onClick={() => setLang(l)}
-                  className={`px-3 py-1.5 font-medium transition-colors ${
-                    lang === l ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:bg-gray-100'
+                  className={`px-1.5 py-0.5 font-semibold transition-colors ${
+                    lang === l
+                      ? 'bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] bg-clip-text text-transparent'
+                      : 'text-gray-400 hover:text-gray-600'
                   }`}
                 >
                   {LANG_LABELS[l]}
@@ -57,14 +59,14 @@ export default function Login() {
         {/* Card */}
         <div className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-gray-900/5">
           {error && (
-            <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
               {error}
             </div>
           )}
 
           {loading ? (
             <div className="flex justify-center py-2">
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-600 border-t-transparent" />
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-violet-600 border-t-transparent" />
             </div>
           ) : (
             <div className="flex justify-center">

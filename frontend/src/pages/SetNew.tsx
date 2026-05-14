@@ -19,6 +19,9 @@ export default function SetNew() {
 
   const parsedCount = importText.trim() ? parseImportText(importText, separator).length : 0
 
+  const inputCls =
+    'w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition-shadow'
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -48,9 +51,9 @@ export default function SetNew() {
       <div className="mx-auto max-w-2xl">
         <h2 className="mb-6 text-2xl font-bold text-gray-900">{t('form.newSet')}</h2>
 
-        <form onSubmit={handleSubmit} className="space-y-5 rounded-xl border bg-white p-6 shadow-sm">
+        <form onSubmit={handleSubmit} className="space-y-5 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
           {error && (
-            <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+            <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
           )}
 
           <div>
@@ -60,7 +63,7 @@ export default function SetNew() {
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              className={inputCls}
               placeholder="English words — B1 level"
             />
           </div>
@@ -71,7 +74,7 @@ export default function SetNew() {
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              className={inputCls}
               placeholder={t('form.optional')}
             />
           </div>
@@ -81,14 +84,14 @@ export default function SetNew() {
             <select
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              className="rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
             >
-              <option value="de-DE">🇩🇪 Deutsch</option>
-              <option value="en-US">🇺🇸 English (US)</option>
-              <option value="en-GB">🇬🇧 English (UK)</option>
-              <option value="fr-FR">🇫🇷 Français</option>
-              <option value="es-ES">🇪🇸 Español</option>
-              <option value="it-IT">🇮🇹 Italiano</option>
+              <option value="de-DE">DE · Deutsch</option>
+              <option value="en-US">EN · English (US)</option>
+              <option value="en-GB">EN · English (UK)</option>
+              <option value="fr-FR">FR · Français</option>
+              <option value="es-ES">ES · Español</option>
+              <option value="it-IT">IT · Italiano</option>
             </select>
           </div>
 
@@ -97,14 +100,16 @@ export default function SetNew() {
               type="button"
               onClick={() => setIsPublic(!isPublic)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                isPublic ? 'bg-indigo-600' : 'bg-gray-300'
+                isPublic ? 'bg-gradient-to-r from-[#4F46E5] to-[#7C3AED]' : 'bg-gray-200'
               }`}
             >
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                isPublic ? 'translate-x-6' : 'translate-x-1'
-              }`} />
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                  isPublic ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
             </button>
-            <span className="text-sm text-gray-700">
+            <span className="text-sm text-gray-600">
               {isPublic ? t('form.publicDesc') : t('form.privateDesc')}
             </span>
           </div>
@@ -120,7 +125,7 @@ export default function SetNew() {
                 type="text"
                 value={separator}
                 onChange={(e) => setSeparator(e.target.value)}
-                className="w-20 rounded-lg border border-gray-300 px-2 py-1 text-center font-mono text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                className="w-20 rounded-xl border border-gray-200 px-2 py-1 text-center font-mono text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
               />
               <span className="text-xs text-gray-400">
                 {t('form.importHint').replace('{sep}', separator || '-')}
@@ -130,7 +135,7 @@ export default function SetNew() {
               value={importText}
               onChange={(e) => setImportText(e.target.value)}
               rows={8}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              className="w-full rounded-xl border border-gray-200 px-3 py-2 font-mono text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
               placeholder={`apple ${separator || '-'} яблоко\nbanana ${separator || '-'} банан`}
             />
             {importText.trim() && (
@@ -146,14 +151,14 @@ export default function SetNew() {
             <button
               type="submit"
               disabled={loading}
-              className="rounded-lg bg-indigo-600 px-6 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+              className="rounded-full bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-6 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-50 transition-colors"
             >
               {loading ? t('form.creating') : t('form.createSet')}
             </button>
             <button
               type="button"
               onClick={() => navigate('/dashboard')}
-              className="rounded-lg border border-gray-300 px-6 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              className="rounded-full border border-gray-200 px-6 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
             >
               {t('common.cancel')}
             </button>

@@ -35,7 +35,9 @@ export default function Explore() {
       setPage(1)
       doSearch(query, 1)
     }, 350)
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
   }, [query])
 
   useEffect(() => {
@@ -59,7 +61,7 @@ export default function Explore() {
     <Layout>
       <div className="mb-6">
         <h2 className="mb-1 text-2xl font-bold text-gray-900">{t('explore.title')}</h2>
-        <p className="text-sm text-gray-500">{t('explore.subtitle')}</p>
+        <p className="text-sm text-gray-400">{t('explore.subtitle')}</p>
       </div>
 
       <div className="relative mb-6">
@@ -73,17 +75,17 @@ export default function Explore() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t('explore.searchPlaceholder')}
-          className="w-full rounded-xl border border-gray-300 py-2.5 pl-9 pr-4 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+          className="w-full rounded-2xl border border-gray-200 py-2.5 pl-9 pr-4 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition-shadow"
         />
         {loading && (
           <span className="absolute inset-y-0 right-3 flex items-center">
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-violet-500 border-t-transparent" />
           </span>
         )}
       </div>
 
       {!loading && (
-        <p className="mb-4 text-sm text-gray-500">
+        <p className="mb-4 text-sm text-gray-400">
           {totalCount > 0
             ? `${t('explore.found')} ${totalCount}`
             : query
@@ -99,17 +101,17 @@ export default function Explore() {
             return (
               <div
                 key={item.id}
-                className="flex flex-col rounded-xl border bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
+                className="flex flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
               >
                 <div className="mb-2 flex-1">
                   <Link
                     to={`/sets/${item.id}`}
-                    className="block font-semibold text-gray-900 hover:text-indigo-600 line-clamp-2 mb-1"
+                    className="mb-1 block font-semibold text-gray-900 hover:text-violet-600 line-clamp-2 transition-colors"
                   >
                     {item.title}
                   </Link>
                   {item.description && (
-                    <p className="text-sm text-gray-500 line-clamp-2">{item.description}</p>
+                    <p className="text-sm text-gray-400 line-clamp-2">{item.description}</p>
                   )}
                 </div>
 
@@ -122,10 +124,10 @@ export default function Explore() {
                   <button
                     onClick={() => handleSave(item.id)}
                     disabled={isSaved || savingId === item.id}
-                    className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
                       isSaved
                         ? 'bg-green-100 text-green-700 cursor-default'
-                        : 'bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50'
+                        : 'bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] text-white hover:opacity-90 transition-opacity disabled:opacity-50'
                     }`}
                   >
                     {isSaved ? t('explore.added') : savingId === item.id ? '...' : t('explore.add')}
@@ -142,7 +144,7 @@ export default function Explore() {
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page === 1}
-            className="rounded-lg border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-40"
+            className="rounded-full border border-gray-200 px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-100 disabled:opacity-40 transition-colors"
           >
             ←
           </button>
@@ -153,10 +155,10 @@ export default function Explore() {
               <button
                 key={p}
                 onClick={() => setPage(p)}
-                className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
                   p === page
-                    ? 'border-indigo-600 bg-indigo-600 text-white'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    ? 'border-violet-600 bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] text-white'
+                    : 'border-gray-200 text-gray-500 hover:bg-gray-100'
                 }`}
               >
                 {p}
@@ -166,7 +168,7 @@ export default function Explore() {
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page === totalPages}
-            className="rounded-lg border px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-40"
+            className="rounded-full border border-gray-200 px-3 py-1.5 text-sm text-gray-500 hover:bg-gray-100 disabled:opacity-40 transition-colors"
           >
             →
           </button>

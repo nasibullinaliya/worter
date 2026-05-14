@@ -25,6 +25,7 @@ export interface SetSummaryDto {
   updatedAt: string
   progress: SetProgressSummary | null
   language: string
+  authorName: string | null
 }
 
 export interface SetDetailDto extends Omit<SetSummaryDto, 'wordCount'> {

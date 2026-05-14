@@ -104,7 +104,7 @@ export default function TestAll() {
   if (loading) return (
     <Layout>
       <div className="flex justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-violet-600 border-t-transparent" />
       </div>
     </Layout>
   )
@@ -113,7 +113,7 @@ export default function TestAll() {
     <Layout>
       <div className="mx-auto max-w-md py-12 text-center">
         <p className="mb-4 text-gray-500">{error || t('test.loadError')}</p>
-        <Link to="/dashboard" className="text-sm text-indigo-600 hover:underline">← {t('test.home')}</Link>
+        <Link to="/dashboard" className="text-sm text-violet-600 hover:underline">← {t('test.home')}</Link>
       </div>
     </Layout>
   )
@@ -164,7 +164,7 @@ export default function TestAll() {
             <p className="text-sm font-medium text-gray-700">{t('test.selectSets')}</p>
             <button
               onClick={() => setSelectedSetIds(allSelected ? new Set() : new Set(sets.map((s) => s.setId)))}
-              className="text-xs text-indigo-600 hover:underline"
+              className="text-xs text-violet-600 hover:underline"
             >
               {allSelected ? t('test.deselectAll') : t('test.selectAll')}
             </button>
@@ -176,7 +176,7 @@ export default function TestAll() {
                   type="checkbox"
                   checked={selectedSetIds.has(s.setId)}
                   onChange={() => toggleSet(s.setId)}
-                  className="h-4 w-4 rounded border-gray-300 accent-indigo-600"
+                  className="h-4 w-4 rounded border-gray-300 accent-violet-600"
                 />
                 <span className="flex-1 text-sm text-gray-800">{s.setTitle}</span>
                 <span className="text-xs text-gray-400">{s.words.length} {wl(s.words.length)}</span>
@@ -195,7 +195,7 @@ export default function TestAll() {
                 onClick={() => setStudyMode(m)}
                 className={`flex-1 rounded-lg border py-2 text-sm font-medium transition-colors ${
                   studyMode === m
-                    ? 'border-indigo-600 bg-indigo-600 text-white'
+                    ? 'border-violet-600 bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] text-white'
                     : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
               >
@@ -221,7 +221,7 @@ export default function TestAll() {
                   const val = Number(e.target.value) || 2
                   setWordCount(Math.max(2, Math.min(maxWords || 500, val)))
                 }}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-100"
               />
             </div>
           )}
@@ -237,7 +237,7 @@ export default function TestAll() {
                 onClick={() => setDirection(d)}
                 className={`flex-1 rounded-lg border py-2 text-sm font-medium transition-colors ${
                   direction === d
-                    ? 'border-indigo-600 bg-indigo-600 text-white'
+                    ? 'border-violet-600 bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] text-white'
                     : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
               >
@@ -254,7 +254,7 @@ export default function TestAll() {
         <button
           onClick={handleStart}
           disabled={!canStart || starting}
-          className="w-full rounded-lg bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-40"
+          className="w-full rounded-lg bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-40"
         >
           {starting
             ? t('test.weakestLoading')

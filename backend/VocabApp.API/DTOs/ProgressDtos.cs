@@ -40,3 +40,5 @@ public record AllWordsItemDto(
     Guid SetId,
     string SetTitle
 );
+
+public record WeeklyDayDto(DateTime Date, int WordCount);

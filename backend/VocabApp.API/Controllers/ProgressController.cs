@@ -215,6 +215,38 @@ public class ProgressController(AppDbContext db) : ControllerBase
         return Ok(ranked);
     }
 
+    // GET /api/progress/weekly — слов пройдено за каждый день текущей недели (Пн–Вс)
+    [HttpGet("weekly")]
+    public async Task<IActionResult> GetWeeklyProgress()
+    {
+        var userId = User.GetUserId();
+        var todayUtc = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        // Понедельник текущей недели (ISO: Mon=1 … Sun=0)
+        var dow = (int)todayUtc.DayOfWeek; // 0=Sun,1=Mon,...,6=Sat
+        var daysFromMonday = dow == 0 ? 6 : dow - 1;
+        var monday = todayUtc.AddDays(-daysFromMonday);
+
+        var timestamps = await db.WordProgress
+            .Where(p => p.UserId == userId)
+            .Select(p => p.LastSeenAt)
+            .ToListAsync();
+
+        var grouped = timestamps
+            .Select(t => DateOnly.FromDateTime(t.ToUniversalTime()))
+            .Where(d => d >= monday)
+            .GroupBy(d => d)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        var result = Enumerable.Range(0, 7).Select(i =>
+        {
+            var date = monday.AddDays(i);
+            return new WeeklyDayDto(date.ToDateTime(TimeOnly.MinValue), grouped.GetValueOrDefault(date, 0));
+        }).ToList();
+
+        return Ok(result);
+    }
+
     private static SetProgressDto ToDto(SetProgress p) =>
         new(p.SetId, p.FirstStudiedAt, p.LastStudiedAt, p.NextReviewAt, p.ReviewStage, p.KnownCount, p.TotalWords);
 }
