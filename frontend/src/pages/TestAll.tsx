@@ -30,7 +30,7 @@ export default function TestAll() {
   const [selectedSetIds, setSelectedSetIds] = useState<Set<string>>(new Set())
   const [direction, setDirection] = useState<Direction>('def-to-word')
   const [studyMode, setStudyMode] = useState<StudyMode>('all')
-  const [wordCount, setWordCount] = useState(20)
+  const [wordCount, setWordCount] = useState(10)
 
   const [sessionWords, setSessionWords] = useState<TestWord[] | null>(null)
   const [starting, setStarting] = useState(false)
@@ -57,6 +57,14 @@ export default function TestAll() {
     () => (sets ?? []).filter((s) => selectedSetIds.has(s.setId)).flatMap((s) => s.words),
     [sets, selectedSetIds],
   )
+
+  // Cap wordCount to total available words whenever selection changes
+  const maxWords = selectedWords.length
+  useEffect(() => {
+    if (maxWords > 0) {
+      setWordCount((prev) => Math.min(prev, maxWords))
+    }
+  }, [maxWords])
 
   const handleStart = async () => {
     if (selectedSetIds.size === 0) return
@@ -198,13 +206,21 @@ export default function TestAll() {
 
           {studyMode === 'weakest' && (
             <div className="mt-4">
-              <label className="mb-1 block text-sm text-gray-600">{t('test.wordCount')}</label>
+              <div className="mb-1 flex items-center justify-between">
+                <label className="text-sm text-gray-600">{t('test.wordCount')}</label>
+                {maxWords > 0 && (
+                  <span className="text-xs text-gray-400">{t('test.wordCountMax')} {maxWords}</span>
+                )}
+              </div>
               <input
                 type="number"
                 min={2}
-                max={500}
+                max={maxWords || 500}
                 value={wordCount}
-                onChange={(e) => setWordCount(Math.max(2, Math.min(500, Number(e.target.value) || 2)))}
+                onChange={(e) => {
+                  const val = Number(e.target.value) || 2
+                  setWordCount(Math.max(2, Math.min(maxWords || 500, val)))
+                }}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
               />
             </div>

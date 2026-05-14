@@ -160,6 +160,7 @@ const T = {
     'test.modeAll': 'Все слова',
     'test.modeWeakest': 'Слова с низким прогрессом',
     'test.wordCount': 'Количество слов',
+    'test.wordCountMax': 'макс.',
     'test.weakestLoading': 'Подбираем слова...',
 
     // stage review
@@ -344,6 +345,7 @@ const T = {
     'test.modeAll': 'All words',
     'test.modeWeakest': 'Weakest words',
     'test.wordCount': 'Word count',
+    'test.wordCountMax': 'max',
     'test.weakestLoading': 'Loading words...',
 
     // stage review
@@ -527,6 +529,7 @@ const T = {
     'test.modeAll': 'Alle Wörter',
     'test.modeWeakest': 'Schwächste Wörter',
     'test.wordCount': 'Wortanzahl',
+    'test.wordCountMax': 'max.',
     'test.weakestLoading': 'Wörter werden geladen...',
 
     // stage review
