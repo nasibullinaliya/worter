@@ -4,8 +4,14 @@ const T = {
   ru: {
     // nav
     'nav.mySets': 'Мои наборы',
+    'nav.today': 'Сегодня',
     'nav.explore': 'Обзор',
     'nav.logout': 'Выйти',
+
+    // today
+    'today.title': 'На сегодня',
+    'today.empty': 'Нет наборов для повторения',
+    'today.emptyDesc': 'Загляните позже — пока всё изучено!',
 
     // auth
     'auth.loginTitle': 'Войдите в аккаунт',
@@ -186,8 +192,13 @@ const T = {
 
   en: {
     'nav.mySets': 'My Sets',
+    'nav.today': 'Today',
     'nav.explore': 'Explore',
     'nav.logout': 'Log out',
+
+    'today.title': "Today's Review",
+    'today.empty': 'No sets due today',
+    'today.emptyDesc': 'Come back later — you are all caught up!',
 
     'auth.loginTitle': 'Sign in to your account',
     'auth.subtitle': 'Learn vocabulary effectively',
@@ -359,8 +370,13 @@ const T = {
 
   de: {
     'nav.mySets': 'Meine Sets',
+    'nav.today': 'Heute',
     'nav.explore': 'Erkunden',
     'nav.logout': 'Abmelden',
+
+    'today.title': 'Heute fällig',
+    'today.empty': 'Keine Sets zur Wiederholung',
+    'today.emptyDesc': 'Kommen Sie später wieder — alles erledigt!',
 
     'auth.loginTitle': 'In Ihr Konto anmelden',
     'auth.subtitle': 'Vokabeln effektiv lernen',

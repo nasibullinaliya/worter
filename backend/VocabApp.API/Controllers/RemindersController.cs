@@ -23,10 +23,11 @@ public class RemindersController(AppDbContext db) : ControllerBase
         var now = DateTime.UtcNow;
 
         // ── Reset expired records ──────────────────────────────────────────────
+        var today = now.Date;
         var expired = await db.SetProgress
             .Where(p => p.UserId == userId
                      && p.NextReviewAt != null
-                     && p.NextReviewAt.Value.AddDays(ReviewScheduler.GracePeriodDays) < now)
+                     && p.NextReviewAt.Value.Date.AddDays(ReviewScheduler.GracePeriodDays) < today)
             .ToListAsync();
 
         if (expired.Count > 0)
@@ -41,7 +42,7 @@ public class RemindersController(AppDbContext db) : ControllerBase
         var due = await db.SetProgress
             .Where(p => p.UserId == userId
                      && p.NextReviewAt != null
-                     && p.NextReviewAt <= now)
+                     && p.NextReviewAt.Value.Date <= today)
             .Include(p => p.Set)
             .OrderBy(p => p.NextReviewAt)
             .Select(p => new ReminderDto(

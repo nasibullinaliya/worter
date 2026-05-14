@@ -33,8 +33,11 @@ export function Layout({ children, reminderCount }: Props) {
               </Link>
               {/* Desktop nav links */}
               <nav className="hidden items-center gap-6 sm:flex">
-                <Link to="/dashboard" className="relative text-sm text-gray-600 hover:text-indigo-600">
+                <Link to="/dashboard" className="text-sm text-gray-600 hover:text-indigo-600">
                   {t('nav.mySets')}
+                </Link>
+                <Link to="/today" className="relative text-sm text-gray-600 hover:text-indigo-600">
+                  {t('nav.today')}
                   {reminderCount != null && reminderCount > 0 && (
                     <span className="absolute -right-4 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white">
                       {reminderCount > 9 ? '9+' : reminderCount}
@@ -74,8 +77,11 @@ export function Layout({ children, reminderCount }: Props) {
 
           {/* Mobile nav row */}
           <nav className="flex items-center gap-5 border-t border-gray-100 pt-2 mt-2 sm:hidden">
-            <Link to="/dashboard" className="relative text-sm text-gray-600 hover:text-indigo-600">
+            <Link to="/dashboard" className="text-sm text-gray-600 hover:text-indigo-600">
               {t('nav.mySets')}
+            </Link>
+            <Link to="/today" className="relative text-sm text-gray-600 hover:text-indigo-600">
+              {t('nav.today')}
               {reminderCount != null && reminderCount > 0 && (
                 <span className="absolute -right-4 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white">
                   {reminderCount > 9 ? '9+' : reminderCount}
