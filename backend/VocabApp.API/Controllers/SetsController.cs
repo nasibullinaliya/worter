@@ -13,6 +13,8 @@ namespace VocabApp.API.Controllers;
 [Authorize]
 public class SetsController(AppDbContext db) : ControllerBase
 {
+    private static readonly HashSet<string> ValidLangs =
+        ["de-DE", "en-US", "en-GB", "ru-RU", "fr-FR", "es-ES", "it-IT"];
     // GET /api/sets — owned + saved sets, with progress summary
     [HttpGet]
     public async Task<IActionResult> GetMySets()
@@ -31,16 +33,16 @@ public class SetsController(AppDbContext db) : ControllerBase
 
         var owned = await db.WordSets
             .Where(s => s.OwnerId == userId)
-            .Select(s => new { s.Id, s.Title, s.Description, s.IsPublic, s.CreatedAt, s.UpdatedAt, WordCount = s.Words.Count })
+            .Select(s => new { s.Id, s.Title, s.Description, s.IsPublic, s.Language, s.CreatedAt, s.UpdatedAt, WordCount = s.Words.Count })
             .ToListAsync();
 
         var saved = await db.UserSets
             .Where(us => us.UserId == userId)
-            .Select(us => new { us.Set.Id, us.Set.Title, us.Set.Description, us.Set.IsPublic, us.Set.CreatedAt, us.Set.UpdatedAt, WordCount = us.Set.Words.Count })
+            .Select(us => new { us.Set.Id, us.Set.Title, us.Set.Description, us.Set.IsPublic, us.Set.Language, us.Set.CreatedAt, us.Set.UpdatedAt, WordCount = us.Set.Words.Count })
             .ToListAsync();
 
-        var result = owned.Select(s => new SetSummaryDto(s.Id, s.Title, s.Description, s.IsPublic, true, s.WordCount, s.CreatedAt, s.UpdatedAt, GetProgress(s.Id)))
-            .Concat(saved.Select(s => new SetSummaryDto(s.Id, s.Title, s.Description, s.IsPublic, false, s.WordCount, s.CreatedAt, s.UpdatedAt, GetProgress(s.Id))))
+        var result = owned.Select(s => new SetSummaryDto(s.Id, s.Title, s.Description, s.IsPublic, true, s.WordCount, s.CreatedAt, s.UpdatedAt, GetProgress(s.Id), s.Language))
+            .Concat(saved.Select(s => new SetSummaryDto(s.Id, s.Title, s.Description, s.IsPublic, false, s.WordCount, s.CreatedAt, s.UpdatedAt, GetProgress(s.Id), s.Language)))
             .OrderByDescending(s => s.CreatedAt);
 
         return Ok(result);
@@ -53,12 +55,14 @@ public class SetsController(AppDbContext db) : ControllerBase
         var userId = User.GetUserId();
         var now = DateTime.UtcNow;
 
+        var lang = ValidLangs.Contains(req.Language ?? "") ? req.Language! : "de-DE";
         var set = new WordSet
         {
             Id = Guid.NewGuid(),
             Title = req.Title.Trim(),
             Description = req.Description?.Trim(),
             IsPublic = req.IsPublic,
+            Language = lang,
             OwnerId = userId,
             CreatedAt = now,
             UpdatedAt = now,
@@ -68,7 +72,7 @@ public class SetsController(AppDbContext db) : ControllerBase
         await db.SaveChangesAsync();
 
         return CreatedAtAction(nameof(GetById), new { id = set.Id },
-            new SetSummaryDto(set.Id, set.Title, set.Description, set.IsPublic, true, 0, set.CreatedAt, set.UpdatedAt, null));
+            new SetSummaryDto(set.Id, set.Title, set.Description, set.IsPublic, true, 0, set.CreatedAt, set.UpdatedAt, null, set.Language));
     }
 
     // GET /api/sets/{id}
@@ -93,7 +97,7 @@ public class SetsController(AppDbContext db) : ControllerBase
 
         return Ok(new SetDetailDto(
             set.Id, set.Title, set.Description, set.IsPublic, isOwner, isSaved,
-            set.CreatedAt, set.UpdatedAt, words));
+            set.CreatedAt, set.UpdatedAt, words, set.Language));
     }
 
     // PUT /api/sets/{id}
@@ -109,6 +113,7 @@ public class SetsController(AppDbContext db) : ControllerBase
         set.Title = req.Title.Trim();
         set.Description = req.Description?.Trim();
         set.IsPublic = req.IsPublic;
+        set.Language = ValidLangs.Contains(req.Language ?? "") ? req.Language! : set.Language;
         set.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();

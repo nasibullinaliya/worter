@@ -158,7 +158,7 @@ export default function SetDetail() {
               <span className="w-6 shrink-0 text-sm text-gray-400">{i + 1}</span>
               <span className="flex w-1/2 items-center gap-1 font-medium text-gray-900">
                 {word.term}
-                <SpeakButton text={word.term} />
+                <SpeakButton text={word.term} lang={set.language} />
               </span>
               <span className="w-1/2 text-sm text-gray-600">{word.definition}</span>
             </div>

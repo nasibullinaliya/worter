@@ -11,6 +11,7 @@ export default function SetNew() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [isPublic, setIsPublic] = useState(false)
+  const [language, setLanguage] = useState('de-DE')
   const [importText, setImportText] = useState('')
   const [separator, setSeparator] = useState('-')
   const [error, setError] = useState('')
@@ -30,7 +31,7 @@ export default function SetNew() {
 
     setLoading(true)
     try {
-      const set = await createSet({ title, description: description || undefined, isPublic })
+      const set = await createSet({ title, description: description || undefined, isPublic, language })
       if (words.length > 0) {
         await addWords(set.id, words)
       }
@@ -73,6 +74,22 @@ export default function SetNew() {
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
               placeholder={t('form.optional')}
             />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">{t('form.language')}</label>
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              className="rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            >
+              <option value="de-DE">🇩🇪 Deutsch</option>
+              <option value="en-US">🇺🇸 English (US)</option>
+              <option value="en-GB">🇬🇧 English (UK)</option>
+              <option value="fr-FR">🇫🇷 Français</option>
+              <option value="es-ES">🇪🇸 Español</option>
+              <option value="it-IT">🇮🇹 Italiano</option>
+            </select>
           </div>
 
           <div className="flex items-center gap-3">

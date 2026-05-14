@@ -5,13 +5,15 @@ namespace VocabApp.API.DTOs;
 public record CreateSetRequest(
     [Required, MaxLength(200)] string Title,
     [MaxLength(2000)] string? Description,
-    bool IsPublic
+    bool IsPublic,
+    [MaxLength(10)] string? Language
 );
 
 public record UpdateSetRequest(
     [Required, MaxLength(200)] string Title,
     [MaxLength(2000)] string? Description,
-    bool IsPublic
+    bool IsPublic,
+    [MaxLength(10)] string? Language
 );
 
 public record SetProgressSummary(
@@ -30,7 +32,8 @@ public record SetSummaryDto(
     int WordCount,
     DateTime CreatedAt,
     DateTime UpdatedAt,
-    SetProgressSummary? Progress
+    SetProgressSummary? Progress,
+    string Language = "de-DE"
 );
 
 public record SetDetailDto(
@@ -42,7 +45,8 @@ public record SetDetailDto(
     bool IsSaved,
     DateTime CreatedAt,
     DateTime UpdatedAt,
-    List<WordDto> Words
+    List<WordDto> Words,
+    string Language = "de-DE"
 );
 
 public record ExploreItemDto(

@@ -60,6 +60,7 @@ export default function Test() {
         backHref={`/sets/${id}`}
         backLabel={set.title}
         onFinish={handleFinish}
+        lang={set.language}
       />
     </Layout>
   )

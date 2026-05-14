@@ -98,6 +98,7 @@ const T = {
     'form.translation': 'Перевод',
     'form.saveError': 'Ошибка сохранения',
     'form.notFoundError': 'Набор не найден',
+    'form.language': 'Язык набора',
 
     // flashcards
     'fc.word': 'Слово',
@@ -286,6 +287,7 @@ const T = {
     'form.translation': 'Translation',
     'form.saveError': 'Save error',
     'form.notFoundError': 'Set not found',
+    'form.language': 'Set language',
 
     'fc.word': 'Word',
     'fc.translation': 'Translation',
@@ -471,6 +473,7 @@ const T = {
     'form.translation': 'Übersetzung',
     'form.saveError': 'Speicherfehler',
     'form.notFoundError': 'Set nicht gefunden',
+    'form.language': 'Sprache des Sets',
 
     'fc.word': 'Wort',
     'fc.translation': 'Übersetzung',

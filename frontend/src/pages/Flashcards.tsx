@@ -44,7 +44,7 @@ export default function Flashcards() {
   // Auto-play term when card changes
   useEffect(() => {
     if (!autoPlay || done || !current) return
-    const timer = setTimeout(() => speak(current.term), 150)
+    const timer = setTimeout(() => speak(current.term, set?.language), 150)
     return () => clearTimeout(timer)
   }, [index, autoPlay, done])
 
@@ -208,7 +208,7 @@ export default function Flashcards() {
               <p className="mb-2 text-xs uppercase tracking-wide text-gray-400">{t('fc.word')}</p>
               <div className="flex items-center gap-2">
                 <p className="text-center text-3xl font-bold text-gray-900">{current?.term}</p>
-                {current && <SpeakButton text={current.term} className="text-gray-400" />}
+                {current && <SpeakButton text={current.term} lang={set?.language} className="text-gray-400" />}
               </div>
               <p className="mt-4 text-xs text-gray-400">{t('fc.flipHint')}</p>
             </div>

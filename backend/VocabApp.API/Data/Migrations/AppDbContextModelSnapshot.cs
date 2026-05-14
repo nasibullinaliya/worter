@@ -197,6 +197,12 @@ namespace VocabApp.API.Data.Migrations
                     b.Property<bool>("IsPublic")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("de-DE");
+
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("uuid");
 

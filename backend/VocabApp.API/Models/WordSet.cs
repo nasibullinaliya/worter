@@ -6,6 +6,7 @@ public class WordSet
     public string Title { get; set; } = null!;
     public string? Description { get; set; }
     public bool IsPublic { get; set; }
+    public string Language { get; set; } = "de-DE";
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 

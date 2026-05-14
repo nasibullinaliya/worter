@@ -30,6 +30,7 @@ interface Props {
   defaultDirection?: Direction
   skipSettings?: boolean
   onBack?: () => void
+  lang?: string
 }
 
 type Screen = 'settings' | 'running' | 'stage-review' | 'done'
@@ -42,6 +43,7 @@ export function TestRunner({
   defaultDirection,
   skipSettings,
   onBack,
+  lang,
 }: Props) {
   const { t, wl, dateLocale } = useLang()
 
@@ -522,7 +524,7 @@ export function TestRunner({
         </p>
         <div className="flex items-center justify-center gap-2">
           <p className="text-3xl font-bold text-gray-900">{questionText}</p>
-          <SpeakButton text={questionText} />
+          <SpeakButton text={questionText} lang={direction === 'word-to-def' ? lang : undefined} />
         </div>
       </div>
 

@@ -24,6 +24,7 @@ export interface SetSummaryDto {
   createdAt: string
   updatedAt: string
   progress: SetProgressSummary | null
+  language: string
 }
 
 export interface SetDetailDto extends Omit<SetSummaryDto, 'wordCount'> {
@@ -46,10 +47,10 @@ export const getSets = () =>
 export const getSet = (id: string) =>
   client.get<SetDetailDto>(`/api/sets/${id}`).then((r) => r.data)
 
-export const createSet = (data: { title: string; description?: string; isPublic: boolean }) =>
+export const createSet = (data: { title: string; description?: string; isPublic: boolean; language: string }) =>
   client.post<SetSummaryDto>('/api/sets', data).then((r) => r.data)
 
-export const updateSet = (id: string, data: { title: string; description?: string; isPublic: boolean }) =>
+export const updateSet = (id: string, data: { title: string; description?: string; isPublic: boolean; language: string }) =>
   client.put(`/api/sets/${id}`, data)
 
 export const deleteSet = (id: string) =>
