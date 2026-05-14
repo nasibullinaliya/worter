@@ -25,7 +25,7 @@ const LANGS: Lang[] = ['ru', 'en', 'de']
 function readLang(): Lang {
   const stored = localStorage.getItem(STORAGE_KEY)
   if (stored && LANGS.includes(stored as Lang)) return stored as Lang
-  return 'ru'
+  return 'en'
 }
 
 export function LangProvider({ children }: { children: ReactNode }) {
