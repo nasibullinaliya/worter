@@ -24,7 +24,7 @@ public static class ReviewScheduler
             SetId = setId,
             FirstStudiedAt = now,
             LastStudiedAt = now,
-            NextReviewAt = now.AddDays(Intervals[0]),  // due in 1 day
+            NextReviewAt = now.Date.AddDays(Intervals[0]),  // due on next calendar day
             ReviewStage = 1,   // first study = stage 1
             KnownCount = knownCount,
             TotalWords = totalWords,
@@ -38,15 +38,15 @@ public static class ReviewScheduler
         progress.KnownCount = knownCount;
         progress.TotalWords = totalWords;
 
-        // Advance stage only when the scheduled review date has arrived.
+        // Advance stage only when the scheduled review calendar day has arrived.
         // Multiple sessions on the same day do NOT advance the stage.
-        if (progress.NextReviewAt.HasValue && progress.NextReviewAt.Value <= now)
+        if (progress.NextReviewAt.HasValue && progress.NextReviewAt.Value.Date <= now.Date)
         {
             progress.ReviewStage = Math.Min(progress.ReviewStage + 1, Intervals.Length + 1);
 
             // Stage 4 = complete
             progress.NextReviewAt = progress.ReviewStage <= Intervals.Length
-                ? progress.FirstStudiedAt.AddDays(Intervals[progress.ReviewStage - 1])
+                ? progress.FirstStudiedAt.Date.AddDays(Intervals[progress.ReviewStage - 1])
                 : null;
         }
     }
@@ -54,7 +54,7 @@ public static class ReviewScheduler
     /// Returns true when the review deadline has been missed by more than GracePeriodDays.
     public static bool IsExpired(SetProgress p) =>
         p.NextReviewAt.HasValue &&
-        DateTime.UtcNow > p.NextReviewAt.Value.AddDays(GracePeriodDays);
+        DateTime.UtcNow.Date > p.NextReviewAt.Value.Date.AddDays(GracePeriodDays);
 
     /// Resets the SRS cycle — user must start fresh from day 1.
     public static void Reset(SetProgress p)
