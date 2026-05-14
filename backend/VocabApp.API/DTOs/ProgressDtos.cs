@@ -4,6 +4,11 @@ namespace VocabApp.API.DTOs;
 
 public record RecordSessionRequest([Required] List<Guid> KnownWordIds);
 
+public record RecordWordProgressRequest(
+    [Required] List<Guid> KnownWordIds,
+    [Required] List<Guid> UnknownWordIds
+);
+
 public record SetProgressDto(
     Guid SetId,
     DateTime FirstStudiedAt,

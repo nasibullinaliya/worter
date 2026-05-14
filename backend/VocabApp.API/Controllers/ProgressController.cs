@@ -117,6 +117,104 @@ public class ProgressController(AppDbContext db) : ControllerBase
         return Ok(new ProgressDetailDto(setProgress != null ? ToDto(setProgress) : null, wordItems));
     }
 
+    // POST /api/progress/words — record word-level progress without SRS (multi-set sessions, quiz)
+    [HttpPost("words")]
+    public async Task<IActionResult> RecordWordProgress(RecordWordProgressRequest req)
+    {
+        var userId = User.GetUserId();
+        var allWordIds = req.KnownWordIds.Concat(req.UnknownWordIds).Distinct().ToHashSet();
+        if (allWordIds.Count == 0) return Ok();
+
+        // Only accept words from sets the user owns or has saved
+        var accessibleWordIdsList = await db.Words
+            .Where(w => allWordIds.Contains(w.Id) &&
+                   (w.Set.OwnerId == userId ||
+                    db.UserSets.Any(us => us.UserId == userId && us.SetId == w.SetId)))
+            .Select(w => w.Id)
+            .ToListAsync();
+        var accessibleWordIds = accessibleWordIdsList.ToHashSet();
+
+        var existing = await db.WordProgress
+            .Where(p => p.UserId == userId && accessibleWordIds.Contains(p.WordId))
+            .ToDictionaryAsync(p => p.WordId);
+
+        var now = DateTime.UtcNow;
+        var knownSet = req.KnownWordIds.Where(id => accessibleWordIds.Contains(id)).ToHashSet();
+        var unknownSet = req.UnknownWordIds.Where(id => accessibleWordIds.Contains(id)).ToHashSet();
+
+        foreach (var wordId in knownSet.Union(unknownSet))
+        {
+            var isKnown = knownSet.Contains(wordId);
+            if (existing.TryGetValue(wordId, out var wp))
+            {
+                if (isKnown) wp.KnownCount++;
+                else wp.UnknownCount++;
+                wp.LastSeenAt = now;
+            }
+            else
+            {
+                db.WordProgress.Add(new WordProgress
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    WordId = wordId,
+                    KnownCount = isKnown ? 1 : 0,
+                    UnknownCount = isKnown ? 0 : 1,
+                    LastSeenAt = now,
+                });
+            }
+        }
+
+        await db.SaveChangesAsync();
+        return Ok();
+    }
+
+    // GET /api/progress/weakest-words?setIds=id1,id2&count=20
+    // Returns N words with the lowest known-rate from the given sets
+    [HttpGet("weakest-words")]
+    public async Task<IActionResult> GetWeakestWords([FromQuery] string setIds, [FromQuery] int count = 20)
+    {
+        if (string.IsNullOrWhiteSpace(setIds)) return BadRequest("setIds is required");
+        if (count <= 0 || count > 500) return BadRequest("count must be 1–500");
+
+        Guid[] parsedIds;
+        try { parsedIds = setIds.Split(',').Select(Guid.Parse).ToArray(); }
+        catch { return BadRequest("Invalid setIds format"); }
+
+        var userId = User.GetUserId();
+        var parsedSet = parsedIds.ToHashSet();
+
+        var words = await db.Words
+            .Where(w => parsedSet.Contains(w.SetId) &&
+                   (w.Set.OwnerId == userId ||
+                    db.UserSets.Any(us => us.UserId == userId && us.SetId == w.SetId)))
+            .Select(w => new { w.Id, w.Term, w.Definition, w.SetId, SetTitle = w.Set.Title })
+            .ToListAsync();
+
+        if (words.Count == 0) return Ok(Array.Empty<AllWordsItemDto>());
+
+        var wordIds = words.Select(w => w.Id).ToHashSet();
+        var progressMap = await db.WordProgress
+            .Where(p => p.UserId == userId && wordIds.Contains(p.WordId))
+            .ToDictionaryAsync(p => p.WordId);
+
+        // Sort: no-progress words first, then by lowest known-rate, then by highest unknown-count
+        var ranked = words
+            .OrderBy(w =>
+            {
+                if (!progressMap.TryGetValue(w.Id, out var p)) return 0.0;
+                var total = p.KnownCount + p.UnknownCount;
+                return total == 0 ? 0.0 : (double)p.KnownCount / total;
+            })
+            .ThenByDescending(w =>
+                progressMap.TryGetValue(w.Id, out var p) ? p.UnknownCount : int.MaxValue)
+            .Take(count)
+            .Select(w => new AllWordsItemDto(w.Id, w.Term, w.Definition, w.SetId, w.SetTitle))
+            .ToList();
+
+        return Ok(ranked);
+    }
+
     private static SetProgressDto ToDto(SetProgress p) =>
         new(p.SetId, p.FirstStudiedAt, p.LastStudiedAt, p.NextReviewAt, p.ReviewStage, p.KnownCount, p.TotalWords);
 }

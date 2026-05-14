@@ -156,6 +156,10 @@ const T = {
     'test.wordCountAll': 'Все',
     'test.noSetsSelected': 'Выберите хотя бы один набор',
     'test.backToSetup': '← Настройки',
+    'test.modeAll': 'Все слова',
+    'test.modeWeakest': 'Слова с низким прогрессом',
+    'test.wordCount': 'Количество слов',
+    'test.weakestLoading': 'Подбираем слова...',
 
     // stage review
     'test.stage': 'Этап',
@@ -335,6 +339,10 @@ const T = {
     'test.wordCountAll': 'All',
     'test.noSetsSelected': 'Select at least one set',
     'test.backToSetup': '← Setup',
+    'test.modeAll': 'All words',
+    'test.modeWeakest': 'Weakest words',
+    'test.wordCount': 'Word count',
+    'test.weakestLoading': 'Loading words...',
 
     // stage review
     'test.stage': 'Stage',
@@ -513,6 +521,10 @@ const T = {
     'test.wordCountAll': 'Alle',
     'test.noSetsSelected': 'Mindestens ein Set auswählen',
     'test.backToSetup': '← Einstellungen',
+    'test.modeAll': 'Alle Wörter',
+    'test.modeWeakest': 'Schwächste Wörter',
+    'test.wordCount': 'Wortanzahl',
+    'test.weakestLoading': 'Wörter werden geladen...',
 
     // stage review
     'test.stage': 'Etappe',

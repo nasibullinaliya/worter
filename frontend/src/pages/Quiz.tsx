@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getSet, type SetDetailDto } from '../api/sets'
+import { recordWordProgress } from '../api/progress'
 import { QuizRunner } from '../components/QuizRunner'
 import { Layout } from '../components/Layout'
 import { useLang } from '../context/LangContext'
@@ -49,12 +50,17 @@ export default function Quiz() {
     definition: w.definition,
   }))
 
+  const handleComplete = (knownWordIds: string[], unknownWordIds: string[]) => {
+    recordWordProgress(knownWordIds, unknownWordIds).catch(() => {})
+  }
+
   return (
     <Layout>
       <QuizRunner
         words={words}
         backLabel={`← ${set.title}`}
         onBack={() => navigate(`/sets/${id}`)}
+        onComplete={handleComplete}
       />
     </Layout>
   )

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getAllWords } from '../api/progress'
+import { getAllWords, getWeakestWords, recordWordProgress } from '../api/progress'
 import { TestRunner } from '../components/TestRunner'
 import { Layout } from '../components/Layout'
 import { useLang } from '../context/LangContext'
@@ -18,6 +18,8 @@ function shuffle<T>(arr: T[]): T[] {
   return [...arr].sort(() => Math.random() - 0.5)
 }
 
+type StudyMode = 'all' | 'weakest'
+
 export default function TestAll() {
   const { t, wl } = useLang()
 
@@ -27,7 +29,11 @@ export default function TestAll() {
 
   const [selectedSetIds, setSelectedSetIds] = useState<Set<string>>(new Set())
   const [direction, setDirection] = useState<Direction>('def-to-word')
+  const [studyMode, setStudyMode] = useState<StudyMode>('all')
+  const [wordCount, setWordCount] = useState(20)
+
   const [sessionWords, setSessionWords] = useState<TestWord[] | null>(null)
+  const [starting, setStarting] = useState(false)
 
   useEffect(() => {
     getAllWords()
@@ -52,9 +58,39 @@ export default function TestAll() {
     [sets, selectedSetIds],
   )
 
-  const handleStart = () => {
-    if (selectedSetIds.size === 0 || selectedWords.length < MIN_WORDS) return
-    setSessionWords(shuffle(selectedWords))
+  const handleStart = async () => {
+    if (selectedSetIds.size === 0) return
+    setStarting(true)
+    try {
+      if (studyMode === 'weakest') {
+        const items = await getWeakestWords([...selectedSetIds], wordCount)
+        if (items.length < MIN_WORDS) return
+        const words: TestWord[] = items.map((i) => ({
+          wordId: i.wordId,
+          setId: i.setId,
+          term: i.term,
+          definition: i.definition,
+        }))
+        setSessionWords(shuffle(words))
+      } else {
+        if (selectedWords.length < MIN_WORDS) return
+        setSessionWords(shuffle(selectedWords))
+      }
+    } catch {
+      setError(t('test.loadError'))
+    } finally {
+      setStarting(false)
+    }
+  }
+
+  const handleFinish = async (knownWordIds: string[]) => {
+    if (!sessionWords) return null
+    const allIds = sessionWords.map((w) => w.wordId)
+    const unknownWordIds = allIds.filter((id) => !knownWordIds.includes(id))
+    try {
+      await recordWordProgress(knownWordIds, unknownWordIds)
+    } catch { /* ignore */ }
+    return null
   }
 
   if (loading) return (
@@ -83,6 +119,7 @@ export default function TestAll() {
           skipSettings
           defaultDirection={direction}
           onBack={() => setSessionWords(null)}
+          onFinish={handleFinish}
         />
       </Layout>
     )
@@ -98,6 +135,9 @@ export default function TestAll() {
       return next
     })
   }
+
+  const canStart = selectedSetIds.size > 0 &&
+    (studyMode === 'all' ? selectedWords.length >= MIN_WORDS : wordCount >= MIN_WORDS)
 
   return (
     <Layout>
@@ -137,6 +177,40 @@ export default function TestAll() {
           </div>
         </div>
 
+        {/* Study mode */}
+        <div className="mb-5 rounded-xl border bg-white p-5 shadow-sm">
+          <p className="mb-3 text-sm font-medium text-gray-700">{t('test.wordCountLabel')}</p>
+          <div className="flex gap-2">
+            {(['all', 'weakest'] as StudyMode[]).map((m) => (
+              <button
+                key={m}
+                onClick={() => setStudyMode(m)}
+                className={`flex-1 rounded-lg border py-2 text-sm font-medium transition-colors ${
+                  studyMode === m
+                    ? 'border-indigo-600 bg-indigo-600 text-white'
+                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                {m === 'all' ? t('test.modeAll') : t('test.modeWeakest')}
+              </button>
+            ))}
+          </div>
+
+          {studyMode === 'weakest' && (
+            <div className="mt-4">
+              <label className="mb-1 block text-sm text-gray-600">{t('test.wordCount')}</label>
+              <input
+                type="number"
+                min={2}
+                max={500}
+                value={wordCount}
+                onChange={(e) => setWordCount(Math.max(2, Math.min(500, Number(e.target.value) || 2)))}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
+          )}
+        </div>
+
         {/* Direction */}
         <div className="mb-6 rounded-xl border bg-white p-5 shadow-sm">
           <p className="mb-3 text-sm font-medium text-gray-700">{t('test.direction')}</p>
@@ -163,10 +237,14 @@ export default function TestAll() {
 
         <button
           onClick={handleStart}
-          disabled={selectedSetIds.size === 0 || selectedWords.length < MIN_WORDS}
+          disabled={!canStart || starting}
           className="w-full rounded-lg bg-indigo-600 py-3 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-40"
         >
-          {t('test.startBtn')} ({selectedWords.length} {wl(selectedWords.length)})
+          {starting
+            ? t('test.weakestLoading')
+            : studyMode === 'all'
+            ? `${t('test.startBtn')} (${selectedWords.length} ${wl(selectedWords.length)})`
+            : `${t('test.startBtn')} (${wordCount} ${wl(wordCount)})`}
         </button>
       </div>
     </Layout>

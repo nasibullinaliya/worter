@@ -21,6 +21,8 @@ interface Props {
   skipSettings?: boolean
   defaultMode?: QuizMode
   defaultDirection?: Direction
+  /** Called once when the quiz results are shown for the first time */
+  onComplete?: (knownWordIds: string[], unknownWordIds: string[]) => void
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -34,6 +36,7 @@ export function QuizRunner({
   skipSettings = false,
   defaultMode = 'type',
   defaultDirection = 'def-to-word',
+  onComplete,
 }: Props) {
   const { t, wl } = useLang()
 
@@ -72,8 +75,22 @@ export function QuizRunner({
     setScreen('running')
   }
 
+  // Track whether onComplete has been fired for the current attempt
+  const [completedFired, setCompletedFired] = useState(false)
+
   const handleCheck = () => {
     setScreen('results')
+    if (onComplete && !completedFired) {
+      const knownIds = quizWords
+        .filter((w) => {
+          const ans = mode === 'type' ? (answers[w.wordId] ?? '') : (selectedChoices[w.wordId] ?? '')
+          return checkAnswer(ans, getAnswer(w, direction))
+        })
+        .map((w) => w.wordId)
+      const unknownIds = quizWords.filter((w) => !knownIds.includes(w.wordId)).map((w) => w.wordId)
+      onComplete(knownIds, unknownIds)
+      setCompletedFired(true)
+    }
   }
 
   const handleRetake = () => {
@@ -81,6 +98,7 @@ export function QuizRunner({
     setQuizWords(shuffled)
     setAnswers({})
     setSelectedChoices({})
+    setCompletedFired(false)
     if (mode === 'choice') {
       setChoices(initChoices(shuffled, direction))
     }
