@@ -110,6 +110,7 @@ const T = {
     'fc.restart': 'Повторить',
     'fc.saving': 'Сохраняем результат...',
     'fc.noWords': 'В наборе нет слов.',
+    'fc.autoPlay': 'Авто-озвучка',
 
     // explore
     'explore.title': 'Публичные наборы',
@@ -296,6 +297,7 @@ const T = {
     'fc.restart': 'Restart',
     'fc.saving': 'Saving result...',
     'fc.noWords': 'No words in this set.',
+    'fc.autoPlay': 'Auto-play',
 
     'explore.title': 'Public Sets',
     'explore.subtitle': 'Find a set and add it to your collection',
@@ -480,6 +482,7 @@ const T = {
     'fc.restart': 'Nochmal',
     'fc.saving': 'Ergebnis wird gespeichert...',
     'fc.noWords': 'Keine Wörter in diesem Set.',
+    'fc.autoPlay': 'Auto-Wiedergabe',
 
     'explore.title': 'Öffentliche Sets',
     'explore.subtitle': 'Finden Sie ein Set und fügen Sie es Ihrer Sammlung hinzu',

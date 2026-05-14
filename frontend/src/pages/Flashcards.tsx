@@ -6,7 +6,9 @@ import { ProgressBar } from '../components/ProgressBar'
 import { SpeakButton } from '../components/SpeakButton'
 import { Layout } from '../components/Layout'
 import { useLang } from '../context/LangContext'
-import { stopSpeech } from '../utils/speech'
+import { speak, stopSpeech } from '../utils/speech'
+
+const AUTOPLAY_KEY = 'fc_autoplay'
 
 function shuffle<T>(arr: T[]): T[] {
   return [...arr].sort(() => Math.random() - 0.5)
@@ -29,6 +31,7 @@ export default function Flashcards() {
   const [result, setResult] = useState<SetProgressDto | null>(null)
   const [saving, setSaving] = useState(false)
   const [pressed, setPressed] = useState<'known' | 'unknown' | null>(null)
+  const [autoPlay, setAutoPlay] = useState(() => localStorage.getItem(AUTOPLAY_KEY) === 'true')
 
   useEffect(() => {
     if (!id) return
@@ -37,6 +40,21 @@ export default function Flashcards() {
       setCards(shuffle(s.words))
     }).finally(() => setLoading(false))
   }, [id])
+
+  // Auto-play term when card changes
+  useEffect(() => {
+    if (!autoPlay || done || !current) return
+    const timer = setTimeout(() => speak(current.term), 150)
+    return () => clearTimeout(timer)
+  }, [index, autoPlay, done])
+
+  const toggleAutoPlay = () => {
+    setAutoPlay((prev) => {
+      const next = !prev
+      localStorage.setItem(AUTOPLAY_KEY, String(next))
+      return next
+    })
+  }
 
   const current = cards[index]
   const total = cards.length
@@ -161,7 +179,24 @@ export default function Flashcards() {
           <span className="text-sm text-gray-500">{index + 1} / {total}</span>
         </div>
 
-        <ProgressBar known={known.size} total={total} className="mb-6" />
+        <ProgressBar known={known.size} total={total} className="mb-3" />
+
+        {/* Auto-play toggle */}
+        <div className="mb-4 flex justify-end">
+          <button
+            onClick={toggleAutoPlay}
+            className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              autoPlay
+                ? 'bg-indigo-100 text-indigo-700'
+                : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600'
+            }`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
+              <path d="M7.557 2.066A.75.75 0 0 1 8 2.75v10.5a.75.75 0 0 1-1.248.56L3.59 11H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h1.59l3.162-2.81a.75.75 0 0 1 .805-.124ZM12.95 3.05a.75.75 0 1 0-1.06 1.06 5.5 5.5 0 0 1 0 7.78.75.75 0 1 0 1.06 1.06 7 7 0 0 0 0-9.9ZM10.828 5.172a.75.75 0 1 0-1.06 1.06 2.5 2.5 0 0 1 0 3.536.75.75 0 1 0 1.06 1.06 4 4 0 0 0 0-5.656Z" />
+            </svg>
+            {t('fc.autoPlay')}
+          </button>
+        </div>
 
         <div
           className="flip-scene mb-6 cursor-pointer"
