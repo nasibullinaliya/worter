@@ -47,6 +47,7 @@ const T = {
     'dashboard.notStudied': 'Ещё не изучался',
     'dashboard.completed': 'Завершён',
     'dashboard.saved': '(сохранён)',
+    'dashboard.known': 'знаю',
     'dashboard.deleteConfirm': 'Удалить набор?',
 
     // stage labels
@@ -235,6 +236,7 @@ const T = {
     'dashboard.notStudied': 'Not studied yet',
     'dashboard.completed': 'Completed',
     'dashboard.saved': '(saved)',
+    'dashboard.known': 'known',
     'dashboard.deleteConfirm': 'Delete set?',
 
     'stage.0': 'Day 1',
@@ -417,6 +419,7 @@ const T = {
     'dashboard.notStudied': 'Noch nicht gelernt',
     'dashboard.completed': 'Abgeschlossen',
     'dashboard.saved': '(gespeichert)',
+    'dashboard.known': 'gelernt',
     'dashboard.deleteConfirm': 'Set löschen?',
 
     'stage.0': 'Tag 1',

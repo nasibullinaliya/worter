@@ -14,3 +14,4 @@ frontend/.env.local
 # Root
 .env
 .DS_Store
+.vercel

@@ -1,3 +1,5 @@
+import { useLang } from '../context/LangContext'
+
 interface ProgressBarProps {
   known: number
   total: number
@@ -5,12 +7,13 @@ interface ProgressBarProps {
 }
 
 export function ProgressBar({ known, total, className = '' }: ProgressBarProps) {
+  const { t } = useLang()
   const pct = total > 0 ? Math.round((known / total) * 100) : 0
 
   return (
     <div className={`space-y-1 ${className}`}>
       <div className="flex justify-between text-xs text-gray-500">
-        <span>{known} / {total} знаю</span>
+        <span>{known} / {total} {t('dashboard.known')}</span>
         <span>{pct}%</span>
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">

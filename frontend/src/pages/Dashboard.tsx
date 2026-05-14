@@ -134,11 +134,12 @@ function SetCard({ set, onDelete }: { set: SetSummaryDto; onDelete: (id: string)
   const p = set.progress
 
   return (
-    <div className="flex flex-col rounded-xl border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-      <div className="mb-2 flex items-start justify-between gap-2">
+    <div className="flex flex-col rounded-xl border bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+      {/* Header */}
+      <div className="mb-3 flex items-start justify-between gap-2">
         <Link
           to={`/sets/${set.id}`}
-          className="flex-1 font-semibold text-gray-900 hover:text-indigo-600 line-clamp-2"
+          className="flex-1 font-semibold text-gray-900 hover:text-indigo-600 line-clamp-2 leading-snug"
         >
           {set.title}
         </Link>
@@ -149,44 +150,48 @@ function SetCard({ set, onDelete }: { set: SetSummaryDto; onDelete: (id: string)
         </span>
       </div>
 
+      {/* Description */}
       {set.description && (
-        <p className="mb-2 text-sm text-gray-500 line-clamp-1">{set.description}</p>
+        <p className="mb-3 text-sm text-gray-500 line-clamp-1">{set.description}</p>
       )}
 
+      {/* Progress */}
       {p ? (
         <ProgressBar known={p.knownCount} total={p.totalWords} className="mb-3" />
       ) : (
         <p className="mb-3 text-xs text-gray-400">{t('dashboard.notStudied')}</p>
       )}
 
-      <div className="mt-auto flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <span>{set.wordCount} {wl(set.wordCount)}</span>
-
-          {/* SRS stage pips */}
-          {p ? (
-            <StageProgress stage={p.reviewStage} />
-          ) : null}
-
-          {!set.isOwner && (
-            <span className="text-xs text-gray-400">{t('dashboard.saved')}</span>
-          )}
+      {/* Footer */}
+      <div className="mt-auto space-y-2">
+        {/* Info row: word count + stage pips + saved badge */}
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-gray-500">{set.wordCount} {wl(set.wordCount)}</span>
+          <div className="flex items-center gap-2">
+            {p && <StageProgress stage={p.reviewStage} />}
+            {!set.isOwner && (
+              <span className="text-xs text-gray-400">{t('dashboard.saved')}</span>
+            )}
+          </div>
         </div>
-        <div className="flex gap-2">
-          {set.isOwner && (
-            <Link to={`/sets/${set.id}/edit`} className="text-xs text-gray-500 hover:text-indigo-600">
+
+        {/* Actions row */}
+        {set.isOwner && (
+          <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-2">
+            <Link
+              to={`/sets/${set.id}/edit`}
+              className="text-xs text-gray-500 hover:text-indigo-600"
+            >
               {t('common.edit')}
             </Link>
-          )}
-          {set.isOwner && (
             <button
               onClick={() => onDelete(set.id)}
               className="text-xs text-red-400 hover:text-red-600"
             >
               {t('common.delete')}
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   )
