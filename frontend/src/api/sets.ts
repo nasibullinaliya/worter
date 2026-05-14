@@ -27,6 +27,7 @@ export interface SetSummaryDto {
 }
 
 export interface SetDetailDto extends Omit<SetSummaryDto, 'wordCount'> {
+  isSaved: boolean
   words: WordDto[]
 }
 

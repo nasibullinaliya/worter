@@ -66,6 +66,11 @@ public class ProgressController(AppDbContext db) : ControllerBase
             setProgress = ReviewScheduler.StartTracking(userId, setId, knownIds.Count, wordIds.Count);
             db.SetProgress.Add(setProgress);
         }
+        else if (setProgress.ReviewStage == 0 && !setProgress.NextReviewAt.HasValue)
+        {
+            // Record was reset due to grace period expiry — restart the SRS cycle
+            ReviewScheduler.Restart(setProgress, knownIds.Count, wordIds.Count);
+        }
         else
         {
             ReviewScheduler.RecordReview(setProgress, knownIds.Count, wordIds.Count);

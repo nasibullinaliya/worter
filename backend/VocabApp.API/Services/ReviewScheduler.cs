@@ -63,4 +63,16 @@ public static class ReviewScheduler
         p.NextReviewAt = null;
         p.KnownCount = 0;
     }
+
+    /// Restarts the SRS cycle after a reset (stage=0, NextReviewAt=null).
+    public static void Restart(SetProgress p, int knownCount, int totalWords)
+    {
+        var now = DateTime.UtcNow;
+        p.FirstStudiedAt = now;
+        p.LastStudiedAt = now;
+        p.ReviewStage = 1;
+        p.NextReviewAt = now.Date.AddDays(Intervals[0]);
+        p.KnownCount = knownCount;
+        p.TotalWords = totalWords;
+    }
 }

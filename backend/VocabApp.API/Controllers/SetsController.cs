@@ -92,7 +92,7 @@ public class SetsController(AppDbContext db) : ControllerBase
         var words = set.Words.Select(w => new WordDto(w.Id, w.Term, w.Definition, w.Position)).ToList();
 
         return Ok(new SetDetailDto(
-            set.Id, set.Title, set.Description, set.IsPublic, isOwner,
+            set.Id, set.Title, set.Description, set.IsPublic, isOwner, isSaved,
             set.CreatedAt, set.UpdatedAt, words));
     }
 

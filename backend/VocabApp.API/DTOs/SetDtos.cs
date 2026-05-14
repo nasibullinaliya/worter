@@ -39,6 +39,7 @@ public record SetDetailDto(
     string? Description,
     bool IsPublic,
     bool IsOwner,
+    bool IsSaved,
     DateTime CreatedAt,
     DateTime UpdatedAt,
     List<WordDto> Words
