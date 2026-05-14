@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ProgressBar } from './ProgressBar'
+import { SpeakButton } from './SpeakButton'
 import { useLang } from '../context/LangContext'
 import {
   type Direction,
@@ -519,7 +520,10 @@ export function TestRunner({
             ? t('test.questionMeaning')
             : t('test.questionTranslate')}
         </p>
-        <p className="text-3xl font-bold text-gray-900">{questionText}</p>
+        <div className="flex items-center justify-center gap-2">
+          <p className="text-3xl font-bold text-gray-900">{questionText}</p>
+          <SpeakButton text={questionText} />
+        </div>
       </div>
 
       {/* ── Choice phase ── */}

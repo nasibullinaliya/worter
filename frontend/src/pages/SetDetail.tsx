@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { getSet, deleteSet, cloneSet, type SetDetailDto } from '../api/sets'
 import { Layout } from '../components/Layout'
+import { SpeakButton } from '../components/SpeakButton'
 import { useLang } from '../context/LangContext'
 
 export default function SetDetail() {
@@ -155,7 +156,10 @@ export default function SetDetail() {
               className={`flex items-center gap-4 px-5 py-3 ${i !== set.words.length - 1 ? 'border-b' : ''}`}
             >
               <span className="w-6 shrink-0 text-sm text-gray-400">{i + 1}</span>
-              <span className="w-1/2 font-medium text-gray-900">{word.term}</span>
+              <span className="flex w-1/2 items-center gap-1 font-medium text-gray-900">
+                {word.term}
+                <SpeakButton text={word.term} />
+              </span>
               <span className="w-1/2 text-sm text-gray-600">{word.definition}</span>
             </div>
           ))}

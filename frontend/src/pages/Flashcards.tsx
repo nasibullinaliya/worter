@@ -3,8 +3,10 @@ import { Link, useParams } from 'react-router-dom'
 import { getSet, type SetDetailDto, type WordDto } from '../api/sets'
 import { recordSession, type SetProgressDto } from '../api/progress'
 import { ProgressBar } from '../components/ProgressBar'
+import { SpeakButton } from '../components/SpeakButton'
 import { Layout } from '../components/Layout'
 import { useLang } from '../context/LangContext'
+import { stopSpeech } from '../utils/speech'
 
 function shuffle<T>(arr: T[]): T[] {
   return [...arr].sort(() => Math.random() - 0.5)
@@ -69,6 +71,7 @@ export default function Flashcards() {
     setKnown(newKnown)
     setUnknown(newUnknown)
     setFlipped(false)
+    stopSpeech()
 
     if (index + 1 >= total) {
       setSaving(true)
@@ -168,13 +171,19 @@ export default function Flashcards() {
           <div className={`flip-inner ${flipped ? 'flipped' : ''}`}>
             <div className="flip-front flex flex-col items-center justify-center rounded-2xl border bg-white p-8 shadow-md">
               <p className="mb-2 text-xs uppercase tracking-wide text-gray-400">{t('fc.word')}</p>
-              <p className="text-center text-3xl font-bold text-gray-900">{current?.term}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-center text-3xl font-bold text-gray-900">{current?.term}</p>
+                {current && <SpeakButton text={current.term} className="text-gray-400" />}
+              </div>
               <p className="mt-4 text-xs text-gray-400">{t('fc.flipHint')}</p>
             </div>
 
             <div className="flip-back flex flex-col items-center justify-center rounded-2xl border bg-indigo-50 p-8 shadow-md">
               <p className="mb-2 text-xs uppercase tracking-wide text-indigo-400">{t('fc.translation')}</p>
-              <p className="text-center text-3xl font-bold text-indigo-900">{current?.definition}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-center text-3xl font-bold text-indigo-900">{current?.definition}</p>
+                {current && <SpeakButton text={current.definition} className="text-indigo-300" />}
+              </div>
             </div>
           </div>
         </div>
