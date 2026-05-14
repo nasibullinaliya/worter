@@ -41,6 +41,9 @@ builder.Services.AddAuthorization();
 // Services
 builder.Services.AddScoped<AuthService>();
 
+// HTTP client (used by TtsController)
+builder.Services.AddHttpClient();
+
 // Controllers
 builder.Services.AddControllers();
 
