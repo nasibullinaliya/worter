@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getSets, getReminders, deleteSet, type SetSummaryDto, type ReminderDto } from '../api/sets'
+import { getSets, getReminders, type SetSummaryDto, type ReminderDto } from '../api/sets'
 import { Layout } from '../components/Layout'
 import { ReviewBanner } from '../components/ReviewBanner'
 import { ProgressBar } from '../components/ProgressBar'
@@ -49,13 +49,6 @@ export default function Dashboard() {
       .then(([s, r]) => { setSets(s); setReminders(r) })
       .finally(() => setLoading(false))
   }, [])
-
-  const handleDelete = async (id: string) => {
-    if (!confirm(t('dashboard.deleteConfirm'))) return
-    await deleteSet(id)
-    setSets((prev) => prev.filter((s) => s.id !== id))
-    setReminders((prev) => prev.filter((r) => r.setId !== id))
-  }
 
   return (
     <Layout reminderCount={reminders.length}>
@@ -110,7 +103,7 @@ export default function Dashboard() {
 
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {sets.map((set) => (
-                <SetCard key={set.id} set={set} onDelete={handleDelete} />
+                <SetCard key={set.id} set={set} />
               ))}
             </div>
           </div>
@@ -129,20 +122,20 @@ export default function Dashboard() {
   )
 }
 
-function SetCard({ set, onDelete }: { set: SetSummaryDto; onDelete: (id: string) => void }) {
+function SetCard({ set }: { set: SetSummaryDto }) {
   const { t, wl } = useLang()
   const p = set.progress
 
   return (
-    <div className="flex flex-col rounded-xl border bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+    <Link
+      to={`/sets/${set.id}`}
+      className="flex flex-col rounded-xl border bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+    >
       {/* Header */}
       <div className="mb-3 flex items-start justify-between gap-2">
-        <Link
-          to={`/sets/${set.id}`}
-          className="flex-1 font-semibold text-gray-900 hover:text-indigo-600 line-clamp-2 leading-snug"
-        >
+        <span className="flex-1 font-semibold text-gray-900 line-clamp-2 leading-snug">
           {set.title}
-        </Link>
+        </span>
         <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
           set.isPublic ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
         }`}>
@@ -162,37 +155,16 @@ function SetCard({ set, onDelete }: { set: SetSummaryDto; onDelete: (id: string)
         <p className="mb-3 text-xs text-gray-400">{t('dashboard.notStudied')}</p>
       )}
 
-      {/* Footer */}
-      <div className="mt-auto space-y-2">
-        {/* Info row: word count + stage pips + saved badge */}
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-500">{set.wordCount} {wl(set.wordCount)}</span>
-          <div className="flex items-center gap-2">
-            {p && <StageProgress stage={p.reviewStage} />}
-            {!set.isOwner && (
-              <span className="text-xs text-gray-400">{t('dashboard.saved')}</span>
-            )}
-          </div>
+      {/* Footer: word count + stage pips + saved badge */}
+      <div className="mt-auto flex items-center justify-between">
+        <span className="text-sm text-gray-500">{set.wordCount} {wl(set.wordCount)}</span>
+        <div className="flex items-center gap-2">
+          {p && <StageProgress stage={p.reviewStage} />}
+          {!set.isOwner && (
+            <span className="text-xs text-gray-400">{t('dashboard.saved')}</span>
+          )}
         </div>
-
-        {/* Actions row */}
-        {set.isOwner && (
-          <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-2">
-            <Link
-              to={`/sets/${set.id}/edit`}
-              className="text-xs text-gray-500 hover:text-indigo-600"
-            >
-              {t('common.edit')}
-            </Link>
-            <button
-              onClick={() => onDelete(set.id)}
-              className="text-xs text-red-400 hover:text-red-600"
-            >
-              {t('common.delete')}
-            </button>
-          </div>
-        )}
       </div>
-    </div>
+    </Link>
   )
 }
