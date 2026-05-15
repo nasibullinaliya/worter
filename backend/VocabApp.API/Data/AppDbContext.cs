@@ -11,6 +11,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<UserSet> UserSets => Set<UserSet>();
     public DbSet<SetProgress> SetProgress => Set<SetProgress>();
     public DbSet<WordProgress> WordProgress => Set<WordProgress>();
+    public DbSet<DailyProgress> DailyProgress => Set<DailyProgress>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -69,6 +70,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(p => p.Set)
              .WithMany(s => s.Progress)
              .HasForeignKey(p => p.SetId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<DailyProgress>(e =>
+        {
+            e.HasKey(p => new { p.UserId, p.Date });
+            e.HasOne(p => p.User)
+             .WithMany()
+             .HasForeignKey(p => p.UserId)
              .OnDelete(DeleteBehavior.Cascade);
         });
 

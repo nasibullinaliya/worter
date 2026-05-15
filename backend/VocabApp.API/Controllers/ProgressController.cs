@@ -76,6 +76,9 @@ public class ProgressController(AppDbContext db) : ControllerBase
             ReviewScheduler.RecordReview(setProgress, knownIds.Count, wordIds.Count);
         }
 
+        // Record daily progress
+        await UpsertDailyProgress(userId, set.Words.Count);
+
         await db.SaveChangesAsync();
 
         return Ok(ToDto(setProgress));
@@ -165,6 +168,9 @@ public class ProgressController(AppDbContext db) : ControllerBase
             }
         }
 
+        // Record daily progress
+        await UpsertDailyProgress(userId, knownSet.Count + unknownSet.Count);
+
         await db.SaveChangesAsync();
         return Ok();
     }
@@ -222,21 +228,15 @@ public class ProgressController(AppDbContext db) : ControllerBase
         var userId = User.GetUserId();
         var todayUtc = DateOnly.FromDateTime(DateTime.UtcNow);
 
-        // Понедельник текущей недели (ISO: Mon=1 … Sun=0)
-        var dow = (int)todayUtc.DayOfWeek; // 0=Sun,1=Mon,...,6=Sat
+        var dow = (int)todayUtc.DayOfWeek;
         var daysFromMonday = dow == 0 ? 6 : dow - 1;
         var monday = todayUtc.AddDays(-daysFromMonday);
 
-        var timestamps = await db.WordProgress
-            .Where(p => p.UserId == userId)
-            .Select(p => p.LastSeenAt)
+        var rows = await db.DailyProgress
+            .Where(p => p.UserId == userId && p.Date >= monday)
             .ToListAsync();
 
-        var grouped = timestamps
-            .Select(t => DateOnly.FromDateTime(t.ToUniversalTime()))
-            .Where(d => d >= monday)
-            .GroupBy(d => d)
-            .ToDictionary(g => g.Key, g => g.Count());
+        var grouped = rows.ToDictionary(p => p.Date, p => p.WordCount);
 
         var result = Enumerable.Range(0, 7).Select(i =>
         {
@@ -245,6 +245,17 @@ public class ProgressController(AppDbContext db) : ControllerBase
         }).ToList();
 
         return Ok(result);
+    }
+
+    private async Task UpsertDailyProgress(Guid userId, int wordCount)
+    {
+        if (wordCount <= 0) return;
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var row = await db.DailyProgress.FindAsync(userId, today);
+        if (row == null)
+            db.DailyProgress.Add(new Models.DailyProgress { UserId = userId, Date = today, WordCount = wordCount });
+        else
+            row.WordCount += wordCount;
     }
 
     private static SetProgressDto ToDto(SetProgress p) =>
