@@ -73,7 +73,7 @@ public class ReviewSchedulerTests
         ReviewScheduler.RecordReview(p, 10, 10);
         p.ReviewStage.Should().Be(2);
 
-        // Simulate stage 2 due (NextReviewAt in the past)
+        // Simulate stage 2 due
         p.NextReviewAt = DateTime.UtcNow.Date.AddDays(-1);
         ReviewScheduler.RecordReview(p, 10, 10);
         p.ReviewStage.Should().Be(3);
@@ -82,18 +82,28 @@ public class ReviewSchedulerTests
         p.NextReviewAt = DateTime.UtcNow.Date.AddDays(-1);
         ReviewScheduler.RecordReview(p, 10, 10);
         p.ReviewStage.Should().Be(4);
-        p.NextReviewAt.Should().BeNull("stage 4 is the final stage");
+
+        // Simulate stage 4 due
+        p.NextReviewAt = DateTime.UtcNow.Date.AddDays(-1);
+        ReviewScheduler.RecordReview(p, 10, 10);
+        p.ReviewStage.Should().Be(5);
+
+        // Simulate stage 5 due → stage 6 = complete
+        p.NextReviewAt = DateTime.UtcNow.Date.AddDays(-1);
+        ReviewScheduler.RecordReview(p, 10, 10);
+        p.ReviewStage.Should().Be(6);
+        p.NextReviewAt.Should().BeNull("stage 6 is the final stage");
     }
 
     [Fact]
-    public void RecordReview_Stage4_NextReviewAt_Stays_Null()
+    public void RecordReview_Stage6_NextReviewAt_Stays_Null()
     {
-        var p = MakeProgress(stage: 4, daysAgo: 0);
-        p.NextReviewAt = null; // stage 4 has no next review
+        var p = MakeProgress(stage: 6, daysAgo: 0);
+        p.NextReviewAt = null; // stage 6 has no next review
 
         ReviewScheduler.RecordReview(p, 10, 10);
 
-        p.ReviewStage.Should().Be(4);
+        p.ReviewStage.Should().Be(6);
         p.NextReviewAt.Should().BeNull();
     }
 
@@ -111,8 +121,10 @@ public class ReviewSchedulerTests
     // ── NextReviewAt intervals ─────────────────────────────────────────────────
 
     [Theory]
-    [InlineData(1, 7)]   // stage 2 → FirstStudiedAt + 7 days
-    [InlineData(2, 14)]  // stage 3 → FirstStudiedAt + 14 days
+    [InlineData(1, 2)]   // stage 2 → FirstStudiedAt + 2 days
+    [InlineData(2, 4)]   // stage 3 → FirstStudiedAt + 4 days
+    [InlineData(3, 7)]   // stage 4 → FirstStudiedAt + 7 days
+    [InlineData(4, 14)]  // stage 5 → FirstStudiedAt + 14 days
     public void RecordReview_Sets_Correct_Interval(int currentStage, int expectedDaysFromFirst)
     {
         var p = MakeProgress(stage: currentStage, daysAgo: 1);
@@ -154,7 +166,7 @@ public class ReviewSchedulerTests
     [Fact]
     public void IsExpired_Returns_False_When_NextReviewAt_Is_Null()
     {
-        var p = MakeProgress(stage: 4, daysAgo: 0);
+        var p = MakeProgress(stage: 6, daysAgo: 0);
         p.NextReviewAt = null;
 
         ReviewScheduler.IsExpired(p).Should().BeFalse();

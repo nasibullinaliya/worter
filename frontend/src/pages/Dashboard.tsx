@@ -8,7 +8,7 @@ import { ProgressBar } from '../components/ProgressBar'
 import { useLang } from '../context/LangContext'
 
 // SRS progression days shown in the UI
-const STAGE_DAYS = [1, 2, 7, 14]
+const STAGE_DAYS = [1, 2, 4, 7, 14]
 
 const DAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 

@@ -4,12 +4,14 @@ namespace VocabApp.API.Services;
 
 public static class ReviewScheduler
 {
-    // Days from firstStudiedAt when each follow-up is due:
-    // After stage 1 (1st study done) → +1 day  (day 2)
-    // After stage 2 (2nd study done) → +7 days (day 7)
-    // After stage 3 (3rd study done) → +14 days (day 14)
-    // Stage 4 = complete
-    private static readonly int[] Intervals = [1, 7, 14];
+    // Absolute days from FirstStudiedAt when the next review is due:
+    // Stage 1 done → next at day +1
+    // Stage 2 done → next at day +2
+    // Stage 3 done → next at day +4
+    // Stage 4 done → next at day +7
+    // Stage 5 done → next at day +14
+    // Stage 6 = complete (NextReviewAt = null)
+    private static readonly int[] Intervals = [1, 2, 4, 7, 14];
 
     // If a review is overdue by more than this many days → reset the cycle.
     public const int GracePeriodDays = 3;
@@ -44,7 +46,7 @@ public static class ReviewScheduler
         {
             progress.ReviewStage = Math.Min(progress.ReviewStage + 1, Intervals.Length + 1);
 
-            // Stage 4 = complete
+            // Stage 6 = complete
             progress.NextReviewAt = progress.ReviewStage <= Intervals.Length
                 ? progress.FirstStudiedAt.Date.AddDays(Intervals[progress.ReviewStage - 1])
                 : null;
