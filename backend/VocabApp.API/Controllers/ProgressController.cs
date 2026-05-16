@@ -204,16 +204,26 @@ public class ProgressController(AppDbContext db) : ControllerBase
             .Where(p => p.UserId == userId && wordIds.Contains(p.WordId))
             .ToDictionaryAsync(p => p.WordId);
 
-        // Sort: no-progress words first, then by lowest known-rate, then by highest unknown-count
+        // Sort priority:
+        //   1. Words with history and rate < 1.0  — lowest rate first, then highest unknownCount
+        //   2. Words with no history yet           — unseen words are secondary to confirmed weak ones
+        //   3. Words with rate = 1.0               — well-known, least priority
         var ranked = words
             .OrderBy(w =>
             {
-                if (!progressMap.TryGetValue(w.Id, out var p)) return 0.0;
+                if (!progressMap.TryGetValue(w.Id, out var p)) return 1; // no history → group 2
                 var total = p.KnownCount + p.UnknownCount;
-                return total == 0 ? 0.0 : (double)p.KnownCount / total;
+                if (total == 0) return 1;
+                return (double)p.KnownCount / total >= 1.0 ? 2 : 0;     // 0=weak, 2=mastered
+            })
+            .ThenBy(w =>
+            {
+                if (!progressMap.TryGetValue(w.Id, out var p)) return 1.0;
+                var total = p.KnownCount + p.UnknownCount;
+                return total == 0 ? 1.0 : (double)p.KnownCount / total;
             })
             .ThenByDescending(w =>
-                progressMap.TryGetValue(w.Id, out var p) ? p.UnknownCount : int.MaxValue)
+                progressMap.TryGetValue(w.Id, out var p) ? p.UnknownCount : 0)
             .Take(count)
             .Select(w => new AllWordsItemDto(w.Id, w.Term, w.Definition, w.SetId, w.SetTitle))
             .ToList();
