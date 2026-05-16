@@ -28,21 +28,26 @@ public class ProgressController(AppDbContext db) : ControllerBase
         if (!isOwner && !isSaved) return Forbid();
 
         var wordIds = set.Words.Select(w => w.Id).ToHashSet();
-        var knownIds = req.KnownWordIds.Where(id => wordIds.Contains(id)).ToHashSet();
+        // wordId → errorCount, only for words actually tested
+        var resultMap = req.WordResults
+            .Where(r => wordIds.Contains(r.WordId))
+            .ToDictionary(r => r.WordId, r => r.ErrorCount);
 
-        // Upsert WordProgress for all words in the set
+        var knownCount = resultMap.Count(r => r.Value == 0);
+
+        // Upsert WordProgress only for words that were tested
         var existing = await db.WordProgress
-            .Where(p => p.UserId == userId && wordIds.Contains(p.WordId))
+            .Where(p => p.UserId == userId && resultMap.Keys.Contains(p.WordId))
             .ToDictionaryAsync(p => p.WordId);
 
         var now = DateTime.UtcNow;
-        foreach (var word in set.Words)
+        foreach (var (wordId, errorCount) in resultMap)
         {
-            var isKnown = knownIds.Contains(word.Id);
-            if (existing.TryGetValue(word.Id, out var wp))
+            var isKnown = errorCount == 0;
+            if (existing.TryGetValue(wordId, out var wp))
             {
                 if (isKnown) wp.KnownCount++;
-                else wp.UnknownCount++;
+                else wp.UnknownCount += errorCount;
                 wp.LastSeenAt = now;
             }
             else
@@ -51,9 +56,9 @@ public class ProgressController(AppDbContext db) : ControllerBase
                 {
                     Id = Guid.NewGuid(),
                     UserId = userId,
-                    WordId = word.Id,
+                    WordId = wordId,
                     KnownCount = isKnown ? 1 : 0,
-                    UnknownCount = isKnown ? 0 : 1,
+                    UnknownCount = isKnown ? 0 : errorCount,
                     LastSeenAt = now,
                 });
             }
@@ -63,21 +68,20 @@ public class ProgressController(AppDbContext db) : ControllerBase
         var setProgress = await db.SetProgress.FirstOrDefaultAsync(p => p.UserId == userId && p.SetId == setId);
         if (setProgress == null)
         {
-            setProgress = ReviewScheduler.StartTracking(userId, setId, knownIds.Count, wordIds.Count);
+            setProgress = ReviewScheduler.StartTracking(userId, setId, knownCount, wordIds.Count);
             db.SetProgress.Add(setProgress);
         }
         else if (setProgress.ReviewStage == 0 && !setProgress.NextReviewAt.HasValue)
         {
-            // Record was reset due to grace period expiry — restart the SRS cycle
-            ReviewScheduler.Restart(setProgress, knownIds.Count, wordIds.Count);
+            ReviewScheduler.Restart(setProgress, knownCount, wordIds.Count);
         }
         else
         {
-            ReviewScheduler.RecordReview(setProgress, knownIds.Count, wordIds.Count);
+            ReviewScheduler.RecordReview(setProgress, knownCount, wordIds.Count);
         }
 
         // Record daily progress
-        await UpsertDailyProgress(userId, set.Words.Count);
+        await UpsertDailyProgress(userId, resultMap.Count);
 
         await db.SaveChangesAsync();
 
@@ -125,8 +129,9 @@ public class ProgressController(AppDbContext db) : ControllerBase
     public async Task<IActionResult> RecordWordProgress(RecordWordProgressRequest req)
     {
         var userId = User.GetUserId();
-        var allWordIds = req.KnownWordIds.Concat(req.UnknownWordIds).Distinct().ToHashSet();
-        if (allWordIds.Count == 0) return Ok();
+        if (req.WordResults.Count == 0) return Ok();
+
+        var allWordIds = req.WordResults.Select(r => r.WordId).ToHashSet();
 
         // Only accept words from sets the user owns or has saved
         var accessibleWordIdsList = await db.Words
@@ -137,21 +142,22 @@ public class ProgressController(AppDbContext db) : ControllerBase
             .ToListAsync();
         var accessibleWordIds = accessibleWordIdsList.ToHashSet();
 
+        var resultMap = req.WordResults
+            .Where(r => accessibleWordIds.Contains(r.WordId))
+            .ToDictionary(r => r.WordId, r => r.ErrorCount);
+
         var existing = await db.WordProgress
-            .Where(p => p.UserId == userId && accessibleWordIds.Contains(p.WordId))
+            .Where(p => p.UserId == userId && resultMap.Keys.Contains(p.WordId))
             .ToDictionaryAsync(p => p.WordId);
 
         var now = DateTime.UtcNow;
-        var knownSet = req.KnownWordIds.Where(id => accessibleWordIds.Contains(id)).ToHashSet();
-        var unknownSet = req.UnknownWordIds.Where(id => accessibleWordIds.Contains(id)).ToHashSet();
-
-        foreach (var wordId in knownSet.Union(unknownSet))
+        foreach (var (wordId, errorCount) in resultMap)
         {
-            var isKnown = knownSet.Contains(wordId);
+            var isKnown = errorCount == 0;
             if (existing.TryGetValue(wordId, out var wp))
             {
                 if (isKnown) wp.KnownCount++;
-                else wp.UnknownCount++;
+                else wp.UnknownCount += errorCount;
                 wp.LastSeenAt = now;
             }
             else
@@ -162,14 +168,14 @@ public class ProgressController(AppDbContext db) : ControllerBase
                     UserId = userId,
                     WordId = wordId,
                     KnownCount = isKnown ? 1 : 0,
-                    UnknownCount = isKnown ? 0 : 1,
+                    UnknownCount = isKnown ? 0 : errorCount,
                     LastSeenAt = now,
                 });
             }
         }
 
         // Record daily progress
-        await UpsertDailyProgress(userId, knownSet.Count + unknownSet.Count);
+        await UpsertDailyProgress(userId, resultMap.Count);
 
         await db.SaveChangesAsync();
         return Ok();

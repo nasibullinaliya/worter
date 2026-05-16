@@ -26,7 +26,7 @@ interface Props {
   words: TestWord[]
   backHref?: string
   backLabel: string
-  onFinish?: (knownWordIds: string[]) => Promise<FinishResult | null>
+  onFinish?: (wordResults: { wordId: string; errorCount: number }[]) => Promise<FinishResult | null>
   defaultDirection?: Direction
   skipSettings?: boolean
   onBack?: () => void
@@ -67,8 +67,8 @@ export function TestRunner({
 
   // ── Global completion tracking ────────────────────────────────────────────────
   const [doneIds, setDoneIds] = useState<Set<string>>(new Set())
-  // words that had at least one wrong answer during the session (unknown even if eventually completed)
-  const [hadErrorIds, setHadErrorIds] = useState<Set<string>>(new Set())
+  // error count per word during this session
+  const [errorCounts, setErrorCounts] = useState<Map<string, number>>(new Map())
   // words that passed choice phase (contributes ½ progress step)
   const [choicePassedIds, setChoicePassedIds] = useState<Set<string>>(new Set())
 
@@ -220,11 +220,14 @@ export function TestRunner({
       const hasMore = nextIdx < stages.length || newCarryOvers.length > 0
 
       if (!hasMore) {
-        // Session complete — words with any error count as unknown
-        const knownIds = [...newDoneIds].filter((id) => !hadErrorIds.has(id))
+        // Session complete — build wordResults with actual error counts
+        const wordResults = [...newDoneIds].map((wordId) => ({
+          wordId,
+          errorCount: errorCounts.get(wordId) ?? 0,
+        }))
         setScreen('done')
         if (onFinish) {
-          onFinish(knownIds)
+          onFinish(wordResults)
             .then(setFinishResult)
             .catch(() => setFinishResult(null))
         }
@@ -251,8 +254,8 @@ export function TestRunner({
         900,
       )
     } else {
-      // Wrong: mark error, wait for manual "Next", carry forward as choice again
-      setHadErrorIds((prev) => new Set([...prev, current.wordId]))
+      // Wrong: increment error count, wait for manual "Next", carry forward as choice again
+      setErrorCounts((prev) => new Map(prev).set(current.wordId, (prev.get(current.wordId) ?? 0) + 1))
       setWaitForNext(true)
       setPendingCarry({ wordId: current.wordId, phase: 'choice' })
     }
@@ -268,8 +271,8 @@ export function TestRunner({
       setTypeFeedback('correct')
       setTimeout(() => advance(null, current.wordId), 900)
     } else {
-      // Wrong: mark error, wait for manual "Next", carry forward as type again
-      setHadErrorIds((prev) => new Set([...prev, current.wordId]))
+      // Wrong: increment error count, wait for manual "Next", carry forward as type again
+      setErrorCounts((prev) => new Map(prev).set(current.wordId, (prev.get(current.wordId) ?? 0) + 1))
       setWrongAnswer(correct)
       setTypeFeedback('wrong')
       setWaitForNext(true)
@@ -284,10 +287,13 @@ export function TestRunner({
     const nextIdx = stageIndex + 1
 
     if (nextIdx >= stages.length && nextCarryOvers.length === 0) {
-      const knownIds = [...doneIds].filter((id) => !hadErrorIds.has(id))
+      const wordResults = [...doneIds].map((wordId) => ({
+        wordId,
+        errorCount: errorCounts.get(wordId) ?? 0,
+      }))
       setScreen('done')
       if (onFinish) {
-        onFinish(knownIds).then(setFinishResult).catch(() => setFinishResult(null))
+        onFinish(wordResults).then(setFinishResult).catch(() => setFinishResult(null))
       }
       return
     }

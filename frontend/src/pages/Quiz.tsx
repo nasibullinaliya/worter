@@ -51,7 +51,11 @@ export default function Quiz() {
   }))
 
   const handleComplete = (knownWordIds: string[], unknownWordIds: string[]) => {
-    recordWordProgress(knownWordIds, unknownWordIds).catch(() => {})
+    const wordResults = [
+      ...knownWordIds.map((wordId) => ({ wordId, errorCount: 0 })),
+      ...unknownWordIds.map((wordId) => ({ wordId, errorCount: 1 })),
+    ]
+    recordWordProgress(wordResults).catch(() => {})
   }
 
   return (

@@ -45,9 +45,9 @@ export default function Test() {
     definition: w.definition,
   }))
 
-  const handleFinish = async (knownWordIds: string[]) => {
+  const handleFinish = async (wordResults: { wordId: string; errorCount: number }[]) => {
     try {
-      return await recordSession(id!, knownWordIds)
+      return await recordSession(id!, wordResults)
     } catch {
       return null
     }

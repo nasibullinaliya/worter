@@ -2,12 +2,14 @@ using System.ComponentModel.DataAnnotations;
 
 namespace VocabApp.API.DTOs;
 
-public record RecordSessionRequest([Required] List<Guid> KnownWordIds);
+/// <summary>Result for a single word in a study session.</summary>
+/// <param name="WordId">The word's ID.</param>
+/// <param name="ErrorCount">Number of mistakes made on this word (0 = perfect).</param>
+public record WordSessionResult(Guid WordId, int ErrorCount);
 
-public record RecordWordProgressRequest(
-    [Required] List<Guid> KnownWordIds,
-    [Required] List<Guid> UnknownWordIds
-);
+public record RecordSessionRequest([Required] List<WordSessionResult> WordResults);
+
+public record RecordWordProgressRequest([Required] List<WordSessionResult> WordResults);
 
 public record SetProgressDto(
     Guid SetId,

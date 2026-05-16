@@ -91,12 +91,9 @@ export default function TestAll() {
     }
   }
 
-  const handleFinish = async (knownWordIds: string[]) => {
-    if (!sessionWords) return null
-    const allIds = sessionWords.map((w) => w.wordId)
-    const unknownWordIds = allIds.filter((id) => !knownWordIds.includes(id))
+  const handleFinish = async (wordResults: { wordId: string; errorCount: number }[]) => {
     try {
-      await recordWordProgress(knownWordIds, unknownWordIds)
+      await recordWordProgress(wordResults)
     } catch { /* ignore */ }
     return null
   }

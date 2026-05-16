@@ -96,7 +96,11 @@ export default function Flashcards() {
     if (index + 1 >= total) {
       setSaving(true)
       try {
-        const res = await recordSession(id!, [...newKnown])
+        const wordResults = [
+          ...[...newKnown].map((wordId) => ({ wordId, errorCount: 0 })),
+          ...[...newUnknown].map((wordId) => ({ wordId, errorCount: 1 })),
+        ]
+        const res = await recordSession(id!, wordResults)
         setResult(res)
       } catch { /* ignore */ }
       finally { setSaving(false) }

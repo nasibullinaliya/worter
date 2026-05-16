@@ -32,15 +32,20 @@ export interface AllWordsItemDto {
   setTitle: string
 }
 
-export const recordSession = (setId: string, knownWordIds: string[]) =>
-  client.post<SetProgressDto>(`/api/progress/${setId}`, { knownWordIds }).then((r) => r.data)
+export interface WordSessionResult {
+  wordId: string
+  errorCount: number
+}
+
+export const recordSession = (setId: string, wordResults: WordSessionResult[]) =>
+  client.post<SetProgressDto>(`/api/progress/${setId}`, { wordResults }).then((r) => r.data)
 
 export const getProgress = (setId: string) =>
   client.get<ProgressDetailDto>(`/api/progress/${setId}`).then((r) => r.data)
 
-/** Record known/unknown word-level progress without SRS (multi-set sessions, quiz) */
-export const recordWordProgress = (knownWordIds: string[], unknownWordIds: string[]) =>
-  client.post('/api/progress/words', { knownWordIds, unknownWordIds })
+/** Record word-level progress without SRS (multi-set sessions, quiz) */
+export const recordWordProgress = (wordResults: WordSessionResult[]) =>
+  client.post('/api/progress/words', { wordResults })
 
 /** Get N words with lowest known-rate from the given sets */
 export const getWeakestWords = (setIds: string[], count: number) =>
