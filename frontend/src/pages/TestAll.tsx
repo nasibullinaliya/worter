@@ -79,7 +79,7 @@ export default function TestAll() {
           term: i.term,
           definition: i.definition,
         }))
-        setSessionWords(shuffle(words))
+        setSessionWords(words) // keep backend ranking order — weakest first
       } else {
         if (selectedWords.length < MIN_WORDS) return
         setSessionWords(shuffle(selectedWords))

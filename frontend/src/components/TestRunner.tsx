@@ -75,7 +75,7 @@ export function TestRunner({
   const [choiceSelected, setChoiceSelected] = useState<string | null>(null)
   const [typeInput, setTypeInput] = useState('')
   const [showHint, setShowHint] = useState(false)
-  const [typeFeedback, setTypeFeedback] = useState<'idle' | 'wrong'>('idle')
+  const [typeFeedback, setTypeFeedback] = useState<'idle' | 'correct' | 'wrong'>('idle')
   const [wrongAnswer, setWrongAnswer] = useState('')
   // After a wrong answer the user must click "Next" manually
   const [waitForNext, setWaitForNext] = useState(false)
@@ -256,12 +256,13 @@ export function TestRunner({
 
   // ── Type phase handlers ───────────────────────────────────────────────────────
   const handleTypeSubmit = () => {
-    if (!currentWord || !current || typeFeedback === 'wrong' || waitForNext) return
+    if (!currentWord || !current || typeFeedback !== 'idle' || waitForNext) return
     const correct = getAnswer(currentWord, direction)
 
     if (checkAnswer(typeInput, correct)) {
-      // Correct: word is fully done, no carry
-      advance(null, current.wordId)
+      // Correct: flash green, then advance after pause
+      setTypeFeedback('correct')
+      setTimeout(() => advance(null, current.wordId), 900)
     } else {
       // Wrong: wait for manual "Next", carry forward as type again
       setWrongAnswer(correct)
@@ -650,15 +651,24 @@ export function TestRunner({
                   ref={inputRef}
                   type="text"
                   value={typeInput}
-                  onChange={(e) => setTypeInput(e.target.value)}
+                  onChange={(e) => typeFeedback === 'idle' && setTypeInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleTypeSubmit()}
                   placeholder={t('test.placeholder')}
-                  className="flex-1 rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-100"
+                  readOnly={typeFeedback === 'correct'}
+                  className={`flex-1 rounded-xl border px-4 py-3 text-sm outline-none transition-colors ${
+                    typeFeedback === 'correct'
+                      ? 'border-green-400 bg-green-50 text-green-800'
+                      : 'border-gray-300 focus:border-violet-400 focus:ring-1 focus:ring-violet-100'
+                  }`}
                 />
                 <button
                   onClick={handleTypeSubmit}
-                  disabled={typeInput.trim() === ''}
-                  className="rounded-xl bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-5 py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-40"
+                  disabled={typeInput.trim() === '' || typeFeedback !== 'idle'}
+                  className={`rounded-xl px-5 py-3 text-sm font-semibold text-white transition-all ${
+                    typeFeedback === 'correct'
+                      ? 'bg-green-400'
+                      : 'bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] hover:opacity-90 disabled:opacity-40'
+                  }`}
                 >
                   {t('test.ok')}
                 </button>
