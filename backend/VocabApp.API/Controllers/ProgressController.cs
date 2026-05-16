@@ -205,16 +205,16 @@ public class ProgressController(AppDbContext db) : ControllerBase
             .ToDictionaryAsync(p => p.WordId);
 
         // Sort priority:
-        //   1. Words with history and rate < 1.0  — lowest rate first, then highest unknownCount
-        //   2. Words with no history yet           — unseen words are secondary to confirmed weak ones
-        //   3. Words with rate = 1.0               — well-known, least priority
+        //   1. Seen + weak  (rate < 1.0)  — lowest rate first, then highest unknownCount
+        //   2. Seen + mastered (rate = 1.0) — studied before but no errors yet
+        //   3. Never seen                  — completely new words, lowest priority
         var ranked = words
             .OrderBy(w =>
             {
-                if (!progressMap.TryGetValue(w.Id, out var p)) return 1; // no history → group 2
+                if (!progressMap.TryGetValue(w.Id, out var p)) return 2; // never seen → last
                 var total = p.KnownCount + p.UnknownCount;
-                if (total == 0) return 1;
-                return (double)p.KnownCount / total >= 1.0 ? 2 : 0;     // 0=weak, 2=mastered
+                if (total == 0) return 2;
+                return (double)p.KnownCount / total < 1.0 ? 0 : 1;      // 0=weak, 1=mastered
             })
             .ThenBy(w =>
             {
