@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getAllWords } from '../api/progress'
+import { getAllWords, recordWordProgress } from '../api/progress'
 import { QuizRunner } from '../components/QuizRunner'
 import { Layout } from '../components/Layout'
 import { useLang } from '../context/LangContext'
@@ -73,6 +73,13 @@ export default function QuizAll() {
           words={sessionWords}
           backLabel={t('test.backToSetup')}
           onBack={() => setSessionWords(null)}
+          onComplete={(knownWordIds, unknownWordIds) => {
+            const wordResults = [
+              ...knownWordIds.map((wordId) => ({ wordId, errorCount: 0 })),
+              ...unknownWordIds.map((wordId) => ({ wordId, errorCount: 1 })),
+            ]
+            recordWordProgress(wordResults).catch(() => {})
+          }}
         />
       </Layout>
     )
