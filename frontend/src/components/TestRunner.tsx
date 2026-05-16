@@ -67,6 +67,8 @@ export function TestRunner({
 
   // ── Global completion tracking ────────────────────────────────────────────────
   const [doneIds, setDoneIds] = useState<Set<string>>(new Set())
+  // words that had at least one wrong answer during the session (unknown even if eventually completed)
+  const [hadErrorIds, setHadErrorIds] = useState<Set<string>>(new Set())
   // words that passed choice phase (contributes ½ progress step)
   const [choicePassedIds, setChoicePassedIds] = useState<Set<string>>(new Set())
 
@@ -218,10 +220,11 @@ export function TestRunner({
       const hasMore = nextIdx < stages.length || newCarryOvers.length > 0
 
       if (!hasMore) {
-        // Session complete
+        // Session complete — words with any error count as unknown
+        const knownIds = [...newDoneIds].filter((id) => !hadErrorIds.has(id))
         setScreen('done')
         if (onFinish) {
-          onFinish([...newDoneIds])
+          onFinish(knownIds)
             .then(setFinishResult)
             .catch(() => setFinishResult(null))
         }
@@ -248,7 +251,8 @@ export function TestRunner({
         900,
       )
     } else {
-      // Wrong: wait for manual "Next", carry forward as choice again
+      // Wrong: mark error, wait for manual "Next", carry forward as choice again
+      setHadErrorIds((prev) => new Set([...prev, current.wordId]))
       setWaitForNext(true)
       setPendingCarry({ wordId: current.wordId, phase: 'choice' })
     }
@@ -264,7 +268,8 @@ export function TestRunner({
       setTypeFeedback('correct')
       setTimeout(() => advance(null, current.wordId), 900)
     } else {
-      // Wrong: wait for manual "Next", carry forward as type again
+      // Wrong: mark error, wait for manual "Next", carry forward as type again
+      setHadErrorIds((prev) => new Set([...prev, current.wordId]))
       setWrongAnswer(correct)
       setTypeFeedback('wrong')
       setWaitForNext(true)
@@ -279,9 +284,10 @@ export function TestRunner({
     const nextIdx = stageIndex + 1
 
     if (nextIdx >= stages.length && nextCarryOvers.length === 0) {
+      const knownIds = [...doneIds].filter((id) => !hadErrorIds.has(id))
       setScreen('done')
       if (onFinish) {
-        onFinish([...doneIds]).then(setFinishResult).catch(() => setFinishResult(null))
+        onFinish(knownIds).then(setFinishResult).catch(() => setFinishResult(null))
       }
       return
     }
