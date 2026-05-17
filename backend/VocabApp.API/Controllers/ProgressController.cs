@@ -263,6 +263,29 @@ public class ProgressController(AppDbContext db) : ControllerBase
         return Ok(result);
     }
 
+    // GET /api/progress/monthly — последние 30 дней включая сегодня
+    [HttpGet("monthly")]
+    public async Task<IActionResult> GetMonthlyProgress()
+    {
+        var userId = User.GetUserId();
+        var todayUtc = DateOnly.FromDateTime(DateTime.UtcNow);
+        var startDate = todayUtc.AddDays(-29);
+
+        var rows = await db.DailyProgress
+            .Where(p => p.UserId == userId && p.Date >= startDate)
+            .ToListAsync();
+
+        var grouped = rows.ToDictionary(p => p.Date, p => p.WordCount);
+
+        var result = Enumerable.Range(0, 30).Select(i =>
+        {
+            var date = startDate.AddDays(i);
+            return new WeeklyDayDto(date.ToDateTime(TimeOnly.MinValue), grouped.GetValueOrDefault(date, 0));
+        }).ToList();
+
+        return Ok(result);
+    }
+
     private async Task UpsertDailyProgress(Guid userId, int wordCount)
     {
         if (wordCount <= 0) return;

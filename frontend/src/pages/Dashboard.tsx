@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getSets, getReminders, type SetSummaryDto, type ReminderDto } from '../api/sets'
-import { getWeeklyProgress, type WeeklyDayDto } from '../api/progress'
+import { getWeeklyProgress, getMonthlyProgress, type WeeklyDayDto } from '../api/progress'
 import { Layout } from '../components/Layout'
 import { ReviewBanner } from '../components/ReviewBanner'
 import { ProgressBar } from '../components/ProgressBar'
@@ -45,17 +45,38 @@ function StageProgress({ stage }: { stage: number }) {
   )
 }
 
-/** Weekly bar chart — words studied per day */
-function WeeklyProgress({ data }: { data: WeeklyDayDto[] }) {
+/** Weekly/Monthly bar chart — words studied per day */
+function ProgressWidget({ weeklyData }: { weeklyData: WeeklyDayDto[] }) {
   const { t, wl } = useLang()
+  const [view, setView] = useState<'weekly' | 'monthly'>('weekly')
+  const [monthlyData, setMonthlyData] = useState<WeeklyDayDto[] | null>(null)
+  const [loadingMonthly, setLoadingMonthly] = useState(false)
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null)
+
+  const handleShowMonthly = async () => {
+    if (!monthlyData) {
+      setLoadingMonthly(true)
+      try {
+        const data = await getMonthlyProgress()
+        setMonthlyData(data)
+      } finally {
+        setLoadingMonthly(false)
+      }
+    }
+    setView('monthly')
+  }
+
+  const isWeekly = view === 'weekly'
+  const data = isWeekly ? weeklyData : (monthlyData ?? [])
   const max = Math.max(...data.map(d => d.wordCount), 1)
   const BAR_HEIGHT = 72
-
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; text: string } | null>(null)
+  const todayStr = new Date().toISOString().slice(0, 10)
 
   return (
     <div className="rounded-2xl border border-indigo-100 bg-indigo-50 p-5 shadow-sm">
-      <p className="mb-4 text-sm font-semibold text-gray-700">{t('dashboard.weeklyProgress')}</p>
+      <p className="mb-4 text-sm font-semibold text-gray-700">
+        {isWeekly ? t('dashboard.weeklyProgress') : t('dashboard.monthlyProgress')}
+      </p>
 
       {/* Cursor-following tooltip */}
       {tooltip && (
@@ -67,42 +88,73 @@ function WeeklyProgress({ data }: { data: WeeklyDayDto[] }) {
         </div>
       )}
 
-      <div className="flex gap-1.5">
-        {data.map((d, i) => {
-          const todayStr = new Date().toISOString().slice(0, 10)
-          const isToday = d.date.slice(0, 10) === todayStr
-          const barPx = d.wordCount > 0
-            ? Math.max(Math.round((d.wordCount / max) * BAR_HEIGHT), 8)
-            : 6
-          const letter = DAY_LETTERS[new Date(d.date.slice(0, 10) + 'T12:00:00Z').getDay()]
-          const tooltipText = `${t('dashboard.studied')} ${d.wordCount} ${wl(d.wordCount)}`
-          return (
-            <div
-              key={i}
-              className="flex flex-1 flex-col items-center gap-1 cursor-default"
-              onMouseMove={(e) => setTooltip({ x: e.clientX, y: e.clientY, text: tooltipText })}
-              onMouseLeave={() => setTooltip(null)}
-            >
-              {/* Область баров фиксированной высоты — бар прижат ко дну */}
-              <div className="flex w-full items-end" style={{ height: `${BAR_HEIGHT}px` }}>
-                <div
-                  className={`w-full rounded-t-full ${
-                    d.wordCount > 0
-                      ? isToday
-                        ? 'bg-indigo-600'
-                        : 'bg-indigo-300'
-                      : 'bg-indigo-200'
-                  }`}
-                  style={{ height: `${barPx}px` }}
-                />
+      {/* Bars */}
+      {loadingMonthly ? (
+        <div className="flex justify-center" style={{ height: `${BAR_HEIGHT + 20}px` }}>
+          <div className="h-5 w-5 animate-spin self-center rounded-full border-2 border-indigo-400 border-t-transparent" />
+        </div>
+      ) : (
+        <div className={`flex ${isWeekly ? 'gap-1.5' : 'gap-0.5'}`}>
+          {data.map((d, i) => {
+            const isToday = d.date.slice(0, 10) === todayStr
+            const barPx = d.wordCount > 0
+              ? Math.max(Math.round((d.wordCount / max) * BAR_HEIGHT), 8)
+              : 6
+            const tooltipText = `${t('dashboard.studied')} ${d.wordCount} ${wl(d.wordCount)}`
+
+            // Weekly: day letter; Monthly: day-of-month number every 5 positions
+            let label: string
+            if (isWeekly) {
+              label = DAY_LETTERS[new Date(d.date.slice(0, 10) + 'T12:00:00Z').getDay()]
+            } else {
+              const dayNum = new Date(d.date.slice(0, 10) + 'T12:00:00Z').getDate()
+              label = (i === 0 || i % 5 === 4 || isToday) ? String(dayNum) : ''
+            }
+
+            return (
+              <div
+                key={i}
+                className="flex flex-1 flex-col items-center gap-1 cursor-default"
+                onMouseMove={(e) => setTooltip({ x: e.clientX, y: e.clientY, text: tooltipText })}
+                onMouseLeave={() => setTooltip(null)}
+              >
+                <div className="flex w-full items-end" style={{ height: `${BAR_HEIGHT}px` }}>
+                  <div
+                    className={`w-full rounded-t-full ${
+                      d.wordCount > 0
+                        ? isToday ? 'bg-indigo-600' : 'bg-indigo-300'
+                        : 'bg-indigo-200'
+                    }`}
+                    style={{ height: `${barPx}px` }}
+                  />
+                </div>
+                <span className={`leading-none ${isWeekly ? 'text-xs' : 'text-[9px]'} ${isToday ? 'font-semibold text-indigo-700' : 'text-indigo-400'}`}>
+                  {label}
+                </span>
               </div>
-              {/* Подпись дня */}
-              <span className={`text-xs leading-none ${isToday ? 'font-semibold text-indigo-700' : 'text-indigo-400'}`}>
-                {letter}
-              </span>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
+      )}
+
+      {/* Toggle link */}
+      <div className="mt-4 border-t border-indigo-100 pt-3 text-center">
+        {isWeekly ? (
+          <button
+            onClick={handleShowMonthly}
+            disabled={loadingMonthly}
+            className="text-xs font-semibold text-indigo-600 hover:underline disabled:opacity-50"
+          >
+            {t('dashboard.viewMonthly')}
+          </button>
+        ) : (
+          <button
+            onClick={() => setView('weekly')}
+            className="text-xs font-semibold text-indigo-600 hover:underline"
+          >
+            ← {t('dashboard.viewWeekly')}
+          </button>
+        )}
       </div>
     </div>
   )
@@ -167,7 +219,7 @@ export default function Dashboard() {
           {/* ── Sidebar: reminders + weekly progress ── */}
           <aside className="w-full lg:w-72 flex-shrink-0 flex flex-col gap-4">
             {reminders.length > 0 && <ReviewBanner reminders={reminders} />}
-            {weeklyData.length > 0 && <WeeklyProgress data={weeklyData} />}
+            {weeklyData.length > 0 && <ProgressWidget weeklyData={weeklyData} />}
           </aside>
         </div>
       )}

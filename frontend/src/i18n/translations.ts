@@ -51,6 +51,9 @@ const T = {
     'dashboard.known': 'знаю',
     'dashboard.deleteConfirm': 'Удалить набор?',
     'dashboard.weeklyProgress': 'Прогресс за неделю',
+    'dashboard.monthlyProgress': 'Прогресс за месяц',
+    'dashboard.viewMonthly': 'Месячный прогресс',
+    'dashboard.viewWeekly': 'Недельный прогресс',
     'dashboard.by': 'от',
     'dashboard.studied': 'Изучено',
 
@@ -251,6 +254,9 @@ const T = {
     'dashboard.known': 'known',
     'dashboard.deleteConfirm': 'Delete set?',
     'dashboard.weeklyProgress': 'Weekly Progress',
+    'dashboard.monthlyProgress': 'Monthly Progress',
+    'dashboard.viewMonthly': 'View monthly progress',
+    'dashboard.viewWeekly': 'View weekly progress',
     'dashboard.by': 'by',
     'dashboard.studied': 'Studied',
 
@@ -445,6 +451,9 @@ const T = {
     'dashboard.known': 'gelernt',
     'dashboard.deleteConfirm': 'Set löschen?',
     'dashboard.weeklyProgress': 'Wochenfortschritt',
+    'dashboard.monthlyProgress': 'Monatsfortschritt',
+    'dashboard.viewMonthly': 'Monatsfortschritt anzeigen',
+    'dashboard.viewWeekly': 'Wochenfortschritt anzeigen',
     'dashboard.by': 'von',
     'dashboard.studied': 'Gelernt',
 

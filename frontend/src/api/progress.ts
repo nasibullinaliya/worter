@@ -65,3 +65,6 @@ export interface WeeklyDayDto {
 
 export const getWeeklyProgress = () =>
   client.get<WeeklyDayDto[]>('/api/progress/weekly').then((r) => r.data)
+
+export const getMonthlyProgress = () =>
+  client.get<WeeklyDayDto[]>('/api/progress/monthly').then((r) => r.data)
