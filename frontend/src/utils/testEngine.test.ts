@@ -118,6 +118,19 @@ describe('checkAnswer', () => {
   it('returns false for empty input', () => {
     expect(checkAnswer('', 'apple')).toBe(false)
   })
+
+  it('ignores spaces around slash separator', () => {
+    // user typed "kriegen/ kriegte / gekriegt", correct is "kriegen / kriegte / gekriegt"
+    expect(checkAnswer('kriegen/ kriegte / gekriegt', 'kriegen / kriegte / gekriegt')).toBe(true)
+    expect(checkAnswer('kriegen/kriegte/gekriegt', 'kriegen / kriegte / gekriegt')).toBe(true)
+    expect(checkAnswer('kriegen / kriegte / gekriegt', 'kriegen/kriegte/gekriegt')).toBe(true)
+  })
+
+  it('ignores spaces around comma, semicolon, and pipe separators', () => {
+    expect(checkAnswer('a ,b', 'a, b')).toBe(true)
+    expect(checkAnswer('a ; b', 'a;b')).toBe(true)
+    expect(checkAnswer('a|b', 'a | b')).toBe(true)
+  })
 })
 
 // ── buildStageQueue ───────────────────────────────────────────────────────────

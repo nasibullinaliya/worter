@@ -39,7 +39,12 @@ export function getHint(answer: string): string {
 }
 
 export function checkAnswer(input: string, correct: string): boolean {
-  const normalize = (s: string) => s.trim().replace(/\s+/g, ' ').toLowerCase()
+  // collapse whitespace, strip spaces around punctuation separators (/ , ; |), lowercase
+  const normalize = (s: string) =>
+    s.trim()
+      .replace(/\s+/g, ' ')
+      .replace(/\s*([/,;|])\s*/g, '$1')
+      .toLowerCase()
   return normalize(input) === normalize(correct)
 }
 
