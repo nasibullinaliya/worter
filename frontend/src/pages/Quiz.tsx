@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getSet, type SetDetailDto } from '../api/sets'
-import { recordWordProgress } from '../api/progress'
+import { recordSession } from '../api/progress'
 import { QuizRunner } from '../components/QuizRunner'
 import { Layout } from '../components/Layout'
 import { useLang } from '../context/LangContext'
@@ -55,7 +55,7 @@ export default function Quiz() {
       ...knownWordIds.map((wordId) => ({ wordId, errorCount: 0 })),
       ...unknownWordIds.map((wordId) => ({ wordId, errorCount: 1 })),
     ]
-    recordWordProgress(wordResults).catch(() => {})
+    if (id) recordSession(id, wordResults).catch(() => {})
   }
 
   return (
