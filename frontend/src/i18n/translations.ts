@@ -104,6 +104,9 @@ const T = {
     'form.saveError': 'Ошибка сохранения',
     'form.notFoundError': 'Набор не найден',
     'form.language': 'Язык набора',
+    'form.warnDuplicate': 'Дубли в импорте:',
+    'form.warnConflict': 'Одно слово с разными переводами:',
+    'form.warnInOtherSets': 'Уже есть в других наборах:',
 
     // flashcards
     'fc.word': 'Слово',
@@ -298,6 +301,9 @@ const T = {
     'form.saveError': 'Save error',
     'form.notFoundError': 'Set not found',
     'form.language': 'Set language',
+    'form.warnDuplicate': 'Duplicates in import:',
+    'form.warnConflict': 'One word with different translations:',
+    'form.warnInOtherSets': 'Already in other sets:',
 
     'fc.word': 'Word',
     'fc.translation': 'Translation',
@@ -489,6 +495,9 @@ const T = {
     'form.saveError': 'Speicherfehler',
     'form.notFoundError': 'Set nicht gefunden',
     'form.language': 'Sprache des Sets',
+    'form.warnDuplicate': 'Duplikate im Import:',
+    'form.warnConflict': 'Ein Wort mit verschiedenen Übersetzungen:',
+    'form.warnInOtherSets': 'Bereits in anderen Sets:',
 
     'fc.word': 'Wort',
     'fc.translation': 'Übersetzung',

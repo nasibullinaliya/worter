@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getSet, updateSet, addWords, updateWord, deleteWord, type SetDetailDto, type WordDto } from '../api/sets'
-import { parseImportText } from '../utils/importParser'
+import { getAllWords, type AllWordsItemDto } from '../api/progress'
+import { parseImportText, analyzeImport } from '../utils/importParser'
 import { Layout } from '../components/Layout'
 import { useLang } from '../context/LangContext'
 
@@ -29,6 +30,9 @@ export default function SetEdit() {
   const [importText, setImportText] = useState('')
   const [importMode, setImportMode] = useState(false)
   const [separator, setSeparator] = useState('-')
+
+  const [allUserWords, setAllUserWords] = useState<AllWordsItemDto[]>([])
+  useEffect(() => { getAllWords().then(setAllUserWords).catch(() => {}) }, [])
 
   const [error, setError] = useState('')
 
@@ -95,11 +99,20 @@ export default function SetEdit() {
     setNewDef('')
   }
 
+  const importParsed = useMemo(
+    () => (importText.trim() ? parseImportText(importText, separator) : []),
+    [importText, separator],
+  )
+
+  const importWarnings = useMemo(() => {
+    if (importParsed.length === 0) return null
+    return analyzeImport(importParsed, allUserWords, set?.id)
+  }, [importParsed, allUserWords, set?.id])
+
   const handleImport = async () => {
     if (!set || !importText.trim()) return
-    const words = parseImportText(importText, separator)
-    if (words.length === 0) { setError(t('form.notRecognized')); return }
-    const added = await addWords(set.id, words)
+    if (importParsed.length === 0) { setError(t('form.notRecognized')); return }
+    const added = await addWords(set.id, importParsed)
     setSet((prev) => (prev ? { ...prev, words: [...prev.words, ...added] } : prev))
     setImportText('')
     setImportMode(false)
@@ -228,10 +241,28 @@ export default function SetEdit() {
                 className="w-full rounded-xl border border-gray-200 px-3 py-2 font-mono text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
               />
               {importText.trim() && (
-                <p className="mt-1 text-xs text-gray-500">
-                  {t('form.recognized')} {parseImportText(importText, separator).length}{' '}
-                  {wl(parseImportText(importText, separator).length)}
+                <p className={`mt-1 text-xs ${importParsed.length > 0 ? 'text-gray-500' : 'text-red-500'}`}>
+                  {importParsed.length > 0
+                    ? `${t('form.recognized')} ${importParsed.length} ${wl(importParsed.length)}`
+                    : t('form.notRecognized')}
                 </p>
+              )}
+              {importWarnings && (
+                importWarnings.duplicates.length > 0 ||
+                importWarnings.conflicts.length > 0 ||
+                importWarnings.existingInOtherSets.length > 0
+              ) && (
+                <div className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 space-y-1">
+                  {importWarnings.duplicates.length > 0 && (
+                    <p>⚠ {t('form.warnDuplicate')} {importWarnings.duplicates.join(', ')}</p>
+                  )}
+                  {importWarnings.conflicts.map(({ term, defs }) => (
+                    <p key={term}>⚠ {t('form.warnConflict')} «{term}»: {defs.join(' / ')}</p>
+                  ))}
+                  {importWarnings.existingInOtherSets.map(({ term, setTitles }) => (
+                    <p key={term}>⚠ {t('form.warnInOtherSets')} «{term}» ({setTitles.map(s => `«${s}»`).join(', ')})</p>
+                  ))}
+                </div>
               )}
               <button
                 onClick={handleImport}

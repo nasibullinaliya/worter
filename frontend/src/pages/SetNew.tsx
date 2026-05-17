@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createSet, addWords } from '../api/sets'
-import { parseImportText } from '../utils/importParser'
+import { getAllWords, type AllWordsItemDto } from '../api/progress'
+import { parseImportText, analyzeImport } from '../utils/importParser'
 import { Layout } from '../components/Layout'
 import { useLang } from '../context/LangContext'
 
@@ -17,7 +18,19 @@ export default function SetNew() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const parsedCount = importText.trim() ? parseImportText(importText, separator).length : 0
+  const [allUserWords, setAllUserWords] = useState<AllWordsItemDto[]>([])
+  useEffect(() => { getAllWords().then(setAllUserWords).catch(() => {}) }, [])
+
+  const parsedWords = useMemo(
+    () => (importText.trim() ? parseImportText(importText, separator) : []),
+    [importText, separator],
+  )
+  const parsedCount = parsedWords.length
+
+  const importWarnings = useMemo(() => {
+    if (parsedWords.length === 0) return null
+    return analyzeImport(parsedWords, allUserWords)
+  }, [parsedWords, allUserWords])
 
   const inputCls =
     'w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 transition-shadow'
@@ -26,8 +39,8 @@ export default function SetNew() {
     e.preventDefault()
     setError('')
 
-    const words = importText.trim() ? parseImportText(importText, separator) : []
-    if (importText.trim() && words.length === 0) {
+    const words = parsedWords
+    if (importText.trim() && parsedWords.length === 0) {
       setError(t('form.parseError'))
       return
     }
@@ -144,6 +157,23 @@ export default function SetNew() {
                   ? `${t('form.recognized')} ${parsedCount} ${wl(parsedCount)}`
                   : t('form.notRecognized')}
               </p>
+            )}
+            {importWarnings && (
+              importWarnings.duplicates.length > 0 ||
+              importWarnings.conflicts.length > 0 ||
+              importWarnings.existingInOtherSets.length > 0
+            ) && (
+              <div className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700 space-y-1">
+                {importWarnings.duplicates.length > 0 && (
+                  <p>⚠ {t('form.warnDuplicate')} {importWarnings.duplicates.join(', ')}</p>
+                )}
+                {importWarnings.conflicts.map(({ term, defs }) => (
+                  <p key={term}>⚠ {t('form.warnConflict')} «{term}»: {defs.join(' / ')}</p>
+                ))}
+                {importWarnings.existingInOtherSets.map(({ term, setTitles }) => (
+                  <p key={term}>⚠ {t('form.warnInOtherSets')} «{term}» ({setTitles.map(s => `«${s}»`).join(', ')})</p>
+                ))}
+              </div>
             )}
           </div>
 
