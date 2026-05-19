@@ -193,10 +193,15 @@ export default function SetDetail() {
               }`}
             >
               <span className="w-6 shrink-0 text-sm text-gray-300">{i + 1}</span>
-              <span className="flex w-1/2 items-center gap-1 font-medium text-gray-900">
-                {word.term}
-                <SpeakButton text={word.term} lang={set.language} />
-              </span>
+              <div className="flex w-1/2 min-w-0 flex-col">
+                <span className="flex items-center gap-1 font-medium text-gray-900">
+                  {word.term}
+                  <SpeakButton text={word.term} lang={set.language} />
+                </span>
+                {word.example && (
+                  <span className="mt-0.5 text-xs italic text-gray-400">{word.example}</span>
+                )}
+              </div>
               <span className="w-1/2 text-sm text-gray-500">{word.definition}</span>
             </div>
           ))}

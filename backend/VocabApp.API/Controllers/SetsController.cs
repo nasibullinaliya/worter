@@ -94,7 +94,7 @@ public class SetsController(AppDbContext db) : ControllerBase
         if (!isOwner && !isSaved && !set.IsPublic)
             return Forbid();
 
-        var words = set.Words.Select(w => new WordDto(w.Id, w.Term, w.Definition, w.Position)).ToList();
+        var words = set.Words.Select(w => new WordDto(w.Id, w.Term, w.Definition, w.Example, w.Position)).ToList();
         var authorName = isOwner ? null : (set.Owner.Name ?? set.Owner.Email);
 
         return Ok(new SetDetailDto(

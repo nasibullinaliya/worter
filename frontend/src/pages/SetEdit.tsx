@@ -23,9 +23,11 @@ export default function SetEdit() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editTerm, setEditTerm] = useState('')
   const [editDef, setEditDef] = useState('')
+  const [editExample, setEditExample] = useState('')
 
   const [newTerm, setNewTerm] = useState('')
   const [newDef, setNewDef] = useState('')
+  const [newExample, setNewExample] = useState('')
 
   const [importText, setImportText] = useState('')
   const [importMode, setImportMode] = useState(false)
@@ -75,11 +77,16 @@ export default function SetEdit() {
     setEditingId(word.id)
     setEditTerm(word.term)
     setEditDef(word.definition)
+    setEditExample(word.example ?? '')
   }
 
   const saveEdit = async (wordId: string) => {
     if (!editTerm.trim() || !editDef.trim()) return
-    const updated = await updateWord(wordId, { term: editTerm.trim(), definition: editDef.trim() })
+    const updated = await updateWord(wordId, {
+      term: editTerm.trim(),
+      definition: editDef.trim(),
+      example: editExample.trim() || undefined,
+    })
     setSet((prev) =>
       prev ? { ...prev, words: prev.words.map((w) => (w.id === wordId ? updated : w)) } : prev
     )
@@ -93,10 +100,15 @@ export default function SetEdit() {
 
   const handleAddWord = async () => {
     if (!set || !newTerm.trim() || !newDef.trim()) return
-    const added = await addWords(set.id, [{ term: newTerm.trim(), definition: newDef.trim() }])
+    const added = await addWords(set.id, [{
+      term: newTerm.trim(),
+      definition: newDef.trim(),
+      example: newExample.trim() || undefined,
+    }])
     setSet((prev) => (prev ? { ...prev, words: [...prev.words, ...added] } : prev))
     setNewTerm('')
     setNewDef('')
+    setNewExample('')
   }
 
   const importParsed = useMemo(
@@ -279,34 +291,49 @@ export default function SetEdit() {
               className={`px-5 py-3 ${i !== set.words.length - 1 ? 'border-b border-gray-50' : ''}`}
             >
               {editingId === word.id ? (
-                <div className="flex items-center gap-2">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={editTerm}
+                      onChange={(e) => setEditTerm(e.target.value)}
+                      placeholder={t('form.word')}
+                      className="flex-1 rounded-xl border border-gray-200 px-2 py-1 text-sm outline-none focus:border-violet-400"
+                    />
+                    <input
+                      value={editDef}
+                      onChange={(e) => setEditDef(e.target.value)}
+                      placeholder={t('form.translation')}
+                      className="flex-1 rounded-xl border border-gray-200 px-2 py-1 text-sm outline-none focus:border-violet-400"
+                    />
+                    <button
+                      onClick={() => saveEdit(word.id)}
+                      className="text-sm font-medium text-violet-600 hover:text-violet-800 transition-colors"
+                    >
+                      {t('common.save')}
+                    </button>
+                    <button
+                      onClick={() => setEditingId(null)}
+                      className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      {t('common.cancel')}
+                    </button>
+                  </div>
                   <input
-                    value={editTerm}
-                    onChange={(e) => setEditTerm(e.target.value)}
-                    className="flex-1 rounded-xl border border-gray-200 px-2 py-1 text-sm outline-none focus:border-violet-400"
+                    value={editExample}
+                    onChange={(e) => setEditExample(e.target.value)}
+                    placeholder={t('form.examplePlaceholder')}
+                    className="w-full rounded-xl border border-gray-200 px-2 py-1 text-sm text-gray-500 italic outline-none focus:border-violet-400"
                   />
-                  <input
-                    value={editDef}
-                    onChange={(e) => setEditDef(e.target.value)}
-                    className="flex-1 rounded-xl border border-gray-200 px-2 py-1 text-sm outline-none focus:border-violet-400"
-                  />
-                  <button
-                    onClick={() => saveEdit(word.id)}
-                    className="text-sm font-medium text-violet-600 hover:text-violet-800 transition-colors"
-                  >
-                    {t('common.save')}
-                  </button>
-                  <button
-                    onClick={() => setEditingId(null)}
-                    className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    {t('common.cancel')}
-                  </button>
                 </div>
               ) : (
                 <div className="flex items-center gap-4">
                   <span className="w-6 shrink-0 text-sm text-gray-300">{i + 1}</span>
-                  <span className="flex-1 font-medium text-gray-900">{word.term}</span>
+                  <div className="flex-1 min-w-0">
+                    <span className="font-medium text-gray-900">{word.term}</span>
+                    {word.example && (
+                      <p className="mt-0.5 text-xs italic text-gray-400 truncate">{word.example}</p>
+                    )}
+                  </div>
                   <span className="flex-1 text-sm text-gray-500">{word.definition}</span>
                   <div className="flex shrink-0 gap-3">
                     <button
@@ -351,6 +378,13 @@ export default function SetEdit() {
                 +
               </button>
             </div>
+            <input
+              value={newExample}
+              onChange={(e) => setNewExample(e.target.value)}
+              placeholder={t('form.examplePlaceholder')}
+              className="mt-2 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm italic text-gray-500 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+              onKeyDown={(e) => e.key === 'Enter' && handleAddWord()}
+            />
           </div>
         </section>
       </div>

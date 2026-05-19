@@ -6,12 +6,14 @@ public record WordDto(
     Guid Id,
     string Term,
     string Definition,
+    string? Example,
     int Position
 );
 
 public record CreateWordRequest(
     [Required, MaxLength(500)] string Term,
-    [Required, MaxLength(2000)] string Definition
+    [Required, MaxLength(2000)] string Definition,
+    [MaxLength(2000)] string? Example = null
 );
 
 public record CreateWordsRequest(
@@ -20,5 +22,6 @@ public record CreateWordsRequest(
 
 public record UpdateWordRequest(
     [Required, MaxLength(500)] string Term,
-    [Required, MaxLength(2000)] string Definition
+    [Required, MaxLength(2000)] string Definition,
+    [MaxLength(2000)] string? Example = null
 );

@@ -4,6 +4,7 @@ export interface WordDto {
   id: string
   term: string
   definition: string
+  example: string | null
   position: number
 }
 
@@ -63,10 +64,10 @@ export const cloneSet = (id: string) =>
 export const uncloneSet = (id: string) =>
   client.delete(`/api/sets/${id}/clone`)
 
-export const addWords = (setId: string, words: { term: string; definition: string }[]) =>
+export const addWords = (setId: string, words: { term: string; definition: string; example?: string }[]) =>
   client.post<WordDto[]>(`/api/sets/${setId}/words`, { words }).then((r) => r.data)
 
-export const updateWord = (wordId: string, data: { term: string; definition: string }) =>
+export const updateWord = (wordId: string, data: { term: string; definition: string; example?: string }) =>
   client.put<WordDto>(`/api/words/${wordId}`, data).then((r) => r.data)
 
 export const deleteWord = (wordId: string) =>

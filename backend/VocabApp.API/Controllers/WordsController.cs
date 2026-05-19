@@ -32,6 +32,7 @@ public class WordsController(AppDbContext db) : ControllerBase
             Id = Guid.NewGuid(),
             Term = w.Term.Trim(),
             Definition = w.Definition.Trim(),
+            Example = string.IsNullOrWhiteSpace(w.Example) ? null : w.Example.Trim(),
             Position = maxPos + 1 + i,
             SetId = setId,
         }).ToList();
@@ -40,7 +41,7 @@ public class WordsController(AppDbContext db) : ControllerBase
         set.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
 
-        return Ok(words.Select(w => new WordDto(w.Id, w.Term, w.Definition, w.Position)));
+        return Ok(words.Select(w => new WordDto(w.Id, w.Term, w.Definition, w.Example, w.Position)));
     }
 
     // PUT /api/words/{id}
@@ -55,10 +56,11 @@ public class WordsController(AppDbContext db) : ControllerBase
 
         word.Term = req.Term.Trim();
         word.Definition = req.Definition.Trim();
+        word.Example = string.IsNullOrWhiteSpace(req.Example) ? null : req.Example.Trim();
         word.Set.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();
-        return Ok(new WordDto(word.Id, word.Term, word.Definition, word.Position));
+        return Ok(new WordDto(word.Id, word.Term, word.Definition, word.Example, word.Position));
     }
 
     // DELETE /api/words/{id}

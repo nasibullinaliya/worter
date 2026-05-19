@@ -9,6 +9,7 @@ import { useLang } from '../context/LangContext'
 import { speak, stopSpeech } from '../utils/speech'
 
 const AUTOPLAY_KEY = 'fc_autoplay'
+const FRONT_SIDE_KEY = 'fc_front_side'
 
 function shuffle<T>(arr: T[]): T[] {
   return [...arr].sort(() => Math.random() - 0.5)
@@ -32,6 +33,10 @@ export default function Flashcards() {
   const [saving, setSaving] = useState(false)
   const [pressed, setPressed] = useState<'known' | 'unknown' | null>(null)
   const [autoPlay, setAutoPlay] = useState(() => localStorage.getItem(AUTOPLAY_KEY) === 'true')
+  // 'term' = word on front (default), 'definition' = translation on front
+  const [frontSide, setFrontSide] = useState<'term' | 'definition'>(
+    () => (localStorage.getItem(FRONT_SIDE_KEY) as 'term' | 'definition') ?? 'term'
+  )
 
   useEffect(() => {
     if (!id) return
@@ -43,12 +48,14 @@ export default function Flashcards() {
       .finally(() => setLoading(false))
   }, [id])
 
-  // Auto-play term when card changes
+  // Auto-play front side text when card changes
   useEffect(() => {
     if (!autoPlay || done || !current) return
-    const timer = setTimeout(() => speak(current.term, set?.language), 150)
+    const text = frontSide === 'term' ? current.term : current.definition
+    const lang = frontSide === 'term' ? set?.language : undefined
+    const timer = setTimeout(() => speak(text, lang), 150)
     return () => clearTimeout(timer)
-  }, [index, autoPlay, done])
+  }, [index, autoPlay, done, frontSide])
 
   const toggleAutoPlay = () => {
     setAutoPlay((prev) => {
@@ -56,6 +63,15 @@ export default function Flashcards() {
       localStorage.setItem(AUTOPLAY_KEY, String(next))
       return next
     })
+  }
+
+  const toggleFrontSide = () => {
+    setFrontSide((prev) => {
+      const next = prev === 'term' ? 'definition' : 'term'
+      localStorage.setItem(FRONT_SIDE_KEY, next)
+      return next
+    })
+    setFlipped(false)
   }
 
   const current = cards[index]
@@ -209,8 +225,20 @@ export default function Flashcards() {
 
         <ProgressBar known={known.size} total={total} className="mb-3" />
 
-        {/* Auto-play toggle */}
-        <div className="mb-4 flex justify-end">
+        {/* Toggles */}
+        <div className="mb-4 flex justify-end gap-2">
+          {/* Front side toggle */}
+          <button
+            onClick={toggleFrontSide}
+            className="flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
+              <path fillRule="evenodd" d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.75.75 0 0 1 1.06-1.06L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
+            </svg>
+            {frontSide === 'term' ? t('fc.frontTerm') : t('fc.frontDef')}
+          </button>
+
+          {/* Auto-play toggle */}
           <button
             onClick={toggleAutoPlay}
             className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
@@ -226,27 +254,58 @@ export default function Flashcards() {
           </button>
         </div>
 
+        {/* Card — front/back driven by frontSide */}
         <div
           className="flip-scene mb-6 cursor-pointer"
           style={{ height: '280px' }}
           onClick={() => setFlipped(!flipped)}
         >
           <div className={`flip-inner ${flipped ? 'flipped' : ''}`}>
+            {/* Front */}
             <div className="flip-front flex flex-col items-center justify-center rounded-2xl border border-gray-100 bg-white p-8 shadow-md">
-              <p className="mb-2 text-xs uppercase tracking-wide text-gray-300">{t('fc.word')}</p>
+              <p className="mb-2 text-xs uppercase tracking-wide text-gray-300">
+                {frontSide === 'term' ? t('fc.word') : t('fc.translation')}
+              </p>
               <div className="flex items-center gap-2">
-                <p className="text-center text-3xl font-bold text-gray-900">{current?.term}</p>
-                {current && <SpeakButton text={current.term} lang={set?.language} className="text-gray-400" />}
+                <p className="text-center text-3xl font-bold text-gray-900">
+                  {frontSide === 'term' ? current?.term : current?.definition}
+                </p>
+                {current && (
+                  <SpeakButton
+                    text={frontSide === 'term' ? current.term : current.definition}
+                    lang={frontSide === 'term' ? set?.language : undefined}
+                    className="text-gray-400"
+                  />
+                )}
               </div>
+              {/* Example shown only on term side */}
+              {frontSide === 'term' && current?.example && (
+                <p className="mt-3 text-center text-sm italic text-gray-400">{current.example}</p>
+              )}
               <p className="mt-4 text-xs text-gray-300">{t('fc.flipHint')}</p>
             </div>
 
+            {/* Back */}
             <div className="flip-back flex flex-col items-center justify-center rounded-2xl border border-violet-100 bg-violet-50 p-8 shadow-md">
-              <p className="mb-2 text-xs uppercase tracking-wide text-violet-400">{t('fc.translation')}</p>
+              <p className="mb-2 text-xs uppercase tracking-wide text-violet-400">
+                {frontSide === 'term' ? t('fc.translation') : t('fc.word')}
+              </p>
               <div className="flex items-center gap-2">
-                <p className="text-center text-3xl font-bold text-violet-900">{current?.definition}</p>
-                {current && <SpeakButton text={current.definition} className="text-violet-300" />}
+                <p className="text-center text-3xl font-bold text-violet-900">
+                  {frontSide === 'term' ? current?.definition : current?.term}
+                </p>
+                {current && (
+                  <SpeakButton
+                    text={frontSide === 'term' ? current.definition : current.term}
+                    lang={frontSide === 'definition' ? set?.language : undefined}
+                    className="text-violet-300"
+                  />
+                )}
               </div>
+              {/* Example shown on back when definition is on front */}
+              {frontSide === 'definition' && current?.example && (
+                <p className="mt-3 text-center text-sm italic text-violet-400">{current.example}</p>
+              )}
             </div>
           </div>
         </div>
