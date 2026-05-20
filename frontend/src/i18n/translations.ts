@@ -112,6 +112,8 @@ const T = {
     'form.warnDuplicate': 'Дубли в импорте:',
     'form.warnConflict': 'Одно слово с разными переводами:',
     'form.warnInOtherSets': 'Уже есть в других наборах:',
+    'form.swapWord': 'Поменять',
+    'form.swapAll': 'Поменять все ⇄',
 
     // flashcards
     'fc.word': 'Слово',
@@ -317,6 +319,8 @@ const T = {
     'form.warnDuplicate': 'Duplicates in import:',
     'form.warnConflict': 'One word with different translations:',
     'form.warnInOtherSets': 'Already in other sets:',
+    'form.swapWord': 'Swap',
+    'form.swapAll': 'Swap all ⇄',
 
     'fc.word': 'Word',
     'fc.translation': 'Translation',
@@ -519,6 +523,8 @@ const T = {
     'form.warnDuplicate': 'Duplikate im Import:',
     'form.warnConflict': 'Ein Wort mit verschiedenen Übersetzungen:',
     'form.warnInOtherSets': 'Bereits in anderen Sets:',
+    'form.swapWord': 'Tauschen',
+    'form.swapAll': 'Alle tauschen ⇄',
 
     'fc.word': 'Wort',
     'fc.translation': 'Übersetzung',

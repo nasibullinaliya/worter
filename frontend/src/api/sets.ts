@@ -73,5 +73,8 @@ export const updateWord = (wordId: string, data: { term: string; definition: str
 export const deleteWord = (wordId: string) =>
   client.delete(`/api/words/${wordId}`)
 
+export const swapAllWords = (setId: string) =>
+  client.post<WordDto[]>(`/api/sets/${setId}/words/swap`).then((r) => r.data)
+
 export const getReminders = () =>
   client.get<ReminderDto[]>('/api/reminders').then((r) => r.data)

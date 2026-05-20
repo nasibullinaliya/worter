@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getSet, updateSet, addWords, updateWord, deleteWord, type SetDetailDto, type WordDto } from '../api/sets'
+import { getSet, updateSet, addWords, updateWord, deleteWord, swapAllWords, type SetDetailDto, type WordDto } from '../api/sets'
 import { getAllWords, type AllWordsItemDto } from '../api/progress'
 import { parseImportText, analyzeImport } from '../utils/importParser'
 import { Layout } from '../components/Layout'
@@ -28,6 +28,8 @@ export default function SetEdit() {
   const [newTerm, setNewTerm] = useState('')
   const [newDef, setNewDef] = useState('')
   const [newExample, setNewExample] = useState('')
+  const [swappingId, setSwappingId] = useState<string | null>(null)
+  const [swappingAll, setSwappingAll] = useState(false)
 
   const [importText, setImportText] = useState('')
   const [importMode, setImportMode] = useState(false)
@@ -120,6 +122,34 @@ export default function SetEdit() {
     if (importParsed.length === 0) return null
     return analyzeImport(importParsed, allUserWords, set?.id)
   }, [importParsed, allUserWords, set?.id])
+
+  const handleSwapWord = async (word: WordDto) => {
+    if (swappingId) return
+    setSwappingId(word.id)
+    try {
+      const updated = await updateWord(word.id, {
+        term: word.definition,
+        definition: word.term,
+        example: word.example ?? undefined,
+      })
+      setSet((prev) =>
+        prev ? { ...prev, words: prev.words.map((w) => (w.id === word.id ? updated : w)) } : prev
+      )
+    } finally {
+      setSwappingId(null)
+    }
+  }
+
+  const handleSwapAll = async () => {
+    if (!set || swappingAll) return
+    setSwappingAll(true)
+    try {
+      const updated = await swapAllWords(set.id)
+      setSet((prev) => (prev ? { ...prev, words: updated } : prev))
+    } finally {
+      setSwappingAll(false)
+    }
+  }
 
   const handleImport = async () => {
     if (!set || !importText.trim()) return
@@ -226,12 +256,23 @@ export default function SetEdit() {
             <h3 className="font-semibold text-gray-900">
               {t('form.wordsSection')} ({set.words.length})
             </h3>
-            <button
-              onClick={() => setImportMode(!importMode)}
-              className="text-sm font-medium text-violet-600 hover:text-violet-800 transition-colors"
-            >
-              {importMode ? t('form.hideImport') : t('form.showImport')}
-            </button>
+            <div className="flex items-center gap-3">
+              {set.words.length > 0 && (
+                <button
+                  onClick={handleSwapAll}
+                  disabled={swappingAll}
+                  className="text-sm font-medium text-gray-400 hover:text-violet-600 disabled:opacity-50 transition-colors"
+                >
+                  {swappingAll ? '...' : t('form.swapAll')}
+                </button>
+              )}
+              <button
+                onClick={() => setImportMode(!importMode)}
+                className="text-sm font-medium text-violet-600 hover:text-violet-800 transition-colors"
+              >
+                {importMode ? t('form.hideImport') : t('form.showImport')}
+              </button>
+            </div>
           </div>
 
           {importMode && (
@@ -336,6 +377,14 @@ export default function SetEdit() {
                   </div>
                   <span className="flex-1 text-sm text-gray-500">{word.definition}</span>
                   <div className="flex shrink-0 gap-3">
+                    <button
+                      onClick={() => handleSwapWord(word)}
+                      disabled={swappingId === word.id}
+                      title={t('form.swapWord')}
+                      className="text-xs text-gray-300 hover:text-violet-500 disabled:opacity-40 transition-colors"
+                    >
+                      {swappingId === word.id ? '...' : '⇄'}
+                    </button>
                     <button
                       onClick={() => startEdit(word)}
                       className="text-xs font-medium text-gray-400 hover:text-violet-600 transition-colors"

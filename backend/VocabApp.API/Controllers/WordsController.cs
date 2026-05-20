@@ -63,6 +63,26 @@ public class WordsController(AppDbContext db) : ControllerBase
         return Ok(new WordDto(word.Id, word.Term, word.Definition, word.Example, word.Position));
     }
 
+    // POST /api/sets/{setId}/words/swap — swap term ↔ definition for all words in the set
+    [HttpPost("api/sets/{setId:guid}/words/swap")]
+    public async Task<IActionResult> SwapAllWords(Guid setId)
+    {
+        var userId = User.GetUserId();
+
+        var set = await db.WordSets.FindAsync(setId);
+        if (set == null) return NotFound();
+        if (set.OwnerId != userId) return Forbid();
+
+        var words = await db.Words.Where(w => w.SetId == setId).ToListAsync();
+        foreach (var word in words)
+            (word.Term, word.Definition) = (word.Definition, word.Term);
+
+        set.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
+
+        return Ok(words.Select(w => new WordDto(w.Id, w.Term, w.Definition, w.Example, w.Position)));
+    }
+
     // DELETE /api/words/{id}
     [HttpDelete("api/words/{id:guid}")]
     public async Task<IActionResult> DeleteWord(Guid id)
