@@ -99,19 +99,16 @@ export function Layout({ children, reminderCount }: Props) {
                 <Link to="/dashboard" className={navCls('/dashboard')}>
                   {t('nav.mySets')}
                 </Link>
-                <Link to="/today" className={`relative ${navCls('/today')}`}>
-                  {t('nav.today')}
+                <Link to="/explore" className={navCls('/explore')}>
+                  {t('nav.explore')}
+                </Link>
+                <Link to="/plan" className={`relative ${navCls('/plan')}`}>
+                  {t('nav.plan')}
                   {reminderCount != null && reminderCount > 0 && (
                     <span className="absolute -right-4 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-violet-600 text-[10px] font-bold text-white">
                       {reminderCount > 9 ? '9+' : reminderCount}
                     </span>
                   )}
-                </Link>
-                <Link to="/explore" className={navCls('/explore')}>
-                  {t('nav.explore')}
-                </Link>
-                <Link to="/plan" className={navCls('/plan')}>
-                  {t('nav.plan')}
                 </Link>
               </nav>
             </div>
@@ -138,19 +135,16 @@ export function Layout({ children, reminderCount }: Props) {
             <Link to="/dashboard" className={navCls('/dashboard')}>
               {t('nav.mySets')}
             </Link>
-            <Link to="/today" className={`relative ${navCls('/today')}`}>
-              {t('nav.today')}
+            <Link to="/explore" className={navCls('/explore')}>
+              {t('nav.explore')}
+            </Link>
+            <Link to="/plan" className={`relative ${navCls('/plan')}`}>
+              {t('nav.plan')}
               {reminderCount != null && reminderCount > 0 && (
                 <span className="absolute -right-4 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-violet-600 text-[10px] font-bold text-white">
                   {reminderCount > 9 ? '9+' : reminderCount}
                 </span>
               )}
-            </Link>
-            <Link to="/explore" className={navCls('/explore')}>
-              {t('nav.explore')}
-            </Link>
-            <Link to="/plan" className={navCls('/plan')}>
-              {t('nav.plan')}
             </Link>
           </nav>
         </div>

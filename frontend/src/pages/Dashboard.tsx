@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getSets, getReminders, type SetSummaryDto, type ReminderDto } from '../api/sets'
 import { getWeeklyProgress, getMonthlyProgress, type WeeklyDayDto } from '../api/progress'
-import { getWeeklyPlan, type PlanDayDto } from '../api/plan'
+import { getWeeklyPlan, getMonthlyPlan, type PlanDayDto } from '../api/plan'
 import { Layout } from '../components/Layout'
 import { ReviewBanner } from '../components/ReviewBanner'
 import { ProgressBar } from '../components/ProgressBar'
@@ -170,19 +170,30 @@ function ProgressWidget({ weeklyData }: { weeklyData: WeeklyDayDto[] }) {
   )
 }
 
-/** Weekly bar chart — words PLANNED per day (from SRS schedule) */
+/** Weekly / Monthly bar chart — words PLANNED per day (from SRS schedule) */
 function PlanWidget() {
   const { t, wl } = useLang()
-  const [data, setData] = useState<PlanDayDto[] | null>(null)
+  const [view, setView] = useState<'weekly' | 'monthly'>('weekly')
+  const [weeklyData, setWeeklyData] = useState<PlanDayDto[] | null>(null)
+  const [monthlyData, setMonthlyData] = useState<PlanDayDto[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [tooltip, setTooltip] = useState<{ x: number; y: number; day: PlanDayDto } | null>(null)
 
   useEffect(() => {
-    getWeeklyPlan()
-      .then(setData)
-      .finally(() => setLoading(false))
+    getWeeklyPlan().then(setWeeklyData).finally(() => setLoading(false))
   }, [])
 
+  const handleShowMonthly = async () => {
+    if (!monthlyData) {
+      setLoading(true)
+      await getMonthlyPlan().then(setMonthlyData)
+      setLoading(false)
+    }
+    setView('monthly')
+  }
+
+  const isWeekly = view === 'weekly'
+  const data = isWeekly ? weeklyData : monthlyData
   const max = Math.max(...(data ?? []).map((d) => d.totalWords), 1)
   const BAR_HEIGHT = 72
   const _now = new Date()
@@ -192,7 +203,9 @@ function PlanWidget() {
   return (
     <div className="rounded-2xl border border-violet-100 bg-violet-50 p-5 shadow-sm">
       <div className="mb-4 flex items-center justify-between">
-        <p className="text-sm font-semibold text-gray-700">{t('plan.weeklyPlan')}</p>
+        <p className="text-sm font-semibold text-gray-700">
+          {isWeekly ? t('plan.weeklyPlan') : t('plan.monthlyPlan')}
+        </p>
         <Link to="/plan" className="text-xs font-semibold text-violet-500 hover:underline">
           {t('plan.viewAll')} →
         </Link>
@@ -221,13 +234,19 @@ function PlanWidget() {
           <div className="h-5 w-5 animate-spin self-center rounded-full border-2 border-violet-400 border-t-transparent" />
         </div>
       ) : (
-        <div className="flex gap-1.5">
+        <div className={`flex ${isWeekly ? 'gap-1.5' : 'gap-0.5'}`}>
           {(data ?? []).map((d, i) => {
             const isToday = d.date.slice(0, 10) === todayStr
             const barPx = d.totalWords > 0
               ? Math.max(Math.round((d.totalWords / max) * BAR_HEIGHT), 8)
               : 6
-            const label = DAY_LETTERS[new Date(d.date.slice(0, 10) + 'T12:00:00Z').getDay()]
+            let label: string
+            if (isWeekly) {
+              label = DAY_LETTERS[new Date(d.date.slice(0, 10) + 'T12:00:00Z').getDay()]
+            } else {
+              const dayNum = new Date(d.date.slice(0, 10) + 'T12:00:00Z').getDate()
+              label = (i === 0 || i % 5 === 4 || isToday) ? String(dayNum) : ''
+            }
 
             return (
               <div
@@ -246,7 +265,7 @@ function PlanWidget() {
                     style={{ height: `${barPx}px` }}
                   />
                 </div>
-                <span className={`leading-none text-xs ${isToday ? 'font-semibold text-violet-700' : 'text-violet-400'}`}>
+                <span className={`leading-none ${isWeekly ? 'text-xs' : 'text-[9px]'} ${isToday ? 'font-semibold text-violet-700' : 'text-violet-400'}`}>
                   {label}
                 </span>
               </div>
@@ -254,6 +273,26 @@ function PlanWidget() {
           })}
         </div>
       )}
+
+      {/* Toggle */}
+      <div className="mt-4 border-t border-violet-100 pt-3 text-center">
+        {isWeekly ? (
+          <button
+            onClick={handleShowMonthly}
+            disabled={loading}
+            className="text-xs font-semibold text-violet-600 hover:underline disabled:opacity-50"
+          >
+            {t('plan.viewMonthly')}
+          </button>
+        ) : (
+          <button
+            onClick={() => setView('weekly')}
+            className="text-xs font-semibold text-violet-600 hover:underline"
+          >
+            ← {t('plan.viewWeekly')}
+          </button>
+        )}
+      </div>
     </div>
   )
 }
