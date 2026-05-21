@@ -29,8 +29,8 @@ There is no password-based registration or login.
 | `WordSets` | Word sets (title, description, isPublic, language, OwnerId) |
 | `Words` | Words (term, definition, example?, position, SetId) |
 | `UserSets` | Saved sets from other users (UserId + SetId) |
-| `SetProgress` | SRS progress per set (stage, NextReviewAt, FirstStudiedAt) |
-| `WordProgress` | Per-word statistics (KnownCount, UnknownCount) |
+| `SetProgress` | SRS progress per set (UserId, SetId, ReviewStage, NextReviewAt, FirstStudiedAt, LastStudiedAt, KnownCount, TotalWords) — unique index on (UserId, SetId) |
+| `WordProgress` | Per-word statistics (UserId, WordId, KnownCount, UnknownCount, LastSeenAt) — unique index on (UserId, WordId) |
 | `DailyProgress` | Per-user per-day word count for the activity chart (composite PK: UserId + Date) |
 
 The `Language` field on `WordSets` is a BCP-47 tag (default `de-DE`) used to drive browser TTS. Supported values: `de-DE`, `en-US`, `en-GB`, `fr-FR`, `es-ES`, `it-IT`.
@@ -118,10 +118,36 @@ For `SetEdit`, terms that already exist in the **current** set are excluded from
   - Multiple sessions on the same day do not double-advance
   - NextReviewAt is calculated from `FirstStudiedAt`, not from the date of the last session
 
-### Grace Period and Reset
-- On every call to `POST /api/progress/{setId}`, overdue records are checked
-- If `NextReviewAt + 3 days < today` → Reset: stage=0, NextReviewAt=null, KnownCount=0
-- After reset the user must restart the cycle from scratch
+### Grace Period and Restart
+- On every call to `POST /api/progress/{setId}`, the overdue status is checked via `ReviewScheduler.IsExpired()`
+- If `today > NextReviewAt + 3 days` → `Restart`: stage=1, new `FirstStudiedAt = now`, NextReviewAt = today+1
+- Within the grace period (missed by ≤ 3 days): stage advances normally via `RecordReview`
+- Stage 0 with null `NextReviewAt` also triggers `Restart` (manual reset path)
+
+### ⚠️ Data migration note (2026-05-21)
+Intervals were extended from **[1, 2, 7, 14]** to **[1, 2, 4, 7, 14]** (day-4 added mid-chain).
+This shifted the meaning of stage numbers for existing records:
+
+| Old stage | Old interval | New stage | New interval |
+|---|---|---|---|
+| 1 | 1 day | 1 | 1 day (unchanged) |
+| 2 | 2 days | 2 | 2 days (unchanged) |
+| 3 | 7 days | **4** | 7 days |
+| 4 | 14 days | **5** | 14 days |
+| 5 (complete) | null | **6** (complete) | null |
+
+Records at old stages 3–5 must be remapped with a one-time SQL migration:
+```sql
+UPDATE "SetProgress" SET "ReviewStage" = 4
+WHERE "ReviewStage" = 3 AND "NextReviewAt" - "FirstStudiedAt" > INTERVAL '5 days';
+
+UPDATE "SetProgress" SET "ReviewStage" = 5
+WHERE "ReviewStage" = 4 AND "NextReviewAt" - "FirstStudiedAt" > INTERVAL '10 days';
+
+UPDATE "SetProgress" SET "ReviewStage" = 6
+WHERE "ReviewStage" = 5 AND "NextReviewAt" IS NULL;
+```
+`NextReviewAt` values do **not** need updating — the interval in days is the same in both chains.
 
 ### Dashboard Display (stage pips 1/2/4/7/14)
 - Grey = future stage
