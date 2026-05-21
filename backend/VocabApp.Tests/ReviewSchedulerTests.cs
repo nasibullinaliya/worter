@@ -203,6 +203,41 @@ public class ReviewSchedulerTests
         p.KnownCount.Should().Be(9);
     }
 
+    // ── IsExpired → Restart integration ───────────────────────────────────────
+
+    [Fact]
+    public void Expired_Progress_Should_Be_Restarted_Not_Advanced()
+    {
+        // Overdue by GracePeriodDays + 1 → IsExpired = true
+        var p = MakeProgress(stage: 2, daysAgo: 0);
+        p.NextReviewAt = DateTime.UtcNow.Date.AddDays(-(ReviewScheduler.GracePeriodDays + 1));
+        var oldFirst = p.FirstStudiedAt;
+
+        ReviewScheduler.IsExpired(p).Should().BeTrue();
+
+        // Controller logic: IsExpired → Restart
+        ReviewScheduler.Restart(p, knownCount: 8, totalWords: 10);
+
+        p.ReviewStage.Should().Be(1, "cycle restarts from stage 1 after expiry");
+        p.NextReviewAt.Should().NotBeNull();
+        p.KnownCount.Should().Be(8);
+        p.FirstStudiedAt.Should().BeAfter(oldFirst, "FirstStudiedAt is reset to now");
+    }
+
+    [Fact]
+    public void Non_Expired_Overdue_Progress_Should_Advance_Not_Restart()
+    {
+        // Overdue by exactly GracePeriodDays → IsExpired = false, stage should advance
+        var p = MakeProgress(stage: 2, daysAgo: 0);
+        p.NextReviewAt = DateTime.UtcNow.Date.AddDays(-ReviewScheduler.GracePeriodDays);
+
+        ReviewScheduler.IsExpired(p).Should().BeFalse();
+
+        ReviewScheduler.RecordReview(p, knownCount: 10, totalWords: 10);
+
+        p.ReviewStage.Should().Be(3, "overdue within grace period still advances the stage");
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────────────
 
     /// <summary>
