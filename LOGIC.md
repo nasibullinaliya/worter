@@ -27,13 +27,15 @@ There is no password-based registration or login.
 |---|---|
 | `Users` | Users (Google ID, email, name, avatar) |
 | `WordSets` | Word sets (title, description, isPublic, language, OwnerId) |
-| `Words` | Words (term, definition, position, SetId) |
+| `Words` | Words (term, definition, example?, position, SetId) |
 | `UserSets` | Saved sets from other users (UserId + SetId) |
 | `SetProgress` | SRS progress per set (stage, NextReviewAt, FirstStudiedAt) |
 | `WordProgress` | Per-word statistics (KnownCount, UnknownCount) |
 | `DailyProgress` | Per-user per-day word count for the activity chart (composite PK: UserId + Date) |
 
 The `Language` field on `WordSets` is a BCP-47 tag (default `de-DE`) used to drive browser TTS. Supported values: `de-DE`, `en-US`, `en-GB`, `fr-FR`, `es-ES`, `it-IT`.
+
+The `Example` field on `Words` is an optional free-text usage example (nullable). Displayed in italic below the term in SetDetail, SetEdit, and on the front side of Flashcards (or back side when definition is the front).
 
 ---
 
@@ -52,6 +54,24 @@ The `Language` field on `WordSets` is a BCP-47 tag (default `de-DE`) used to dri
 
 ### Removing a saved set (`DELETE /api/sets/{id}/clone`)
 - Removes the `UserSets` record; the original set is not affected
+
+---
+
+## Word Editing (SetEdit)
+
+### Adding / editing words
+- Each word has three fields: **term**, **definition**, **example** (optional)
+- Words can be added one by one or via bulk import
+
+### Swapping term ↔ definition
+If the user accidentally imported words in the wrong order (e.g. translation in the term field), they can swap term and definition:
+
+| Action | How | Endpoint |
+|---|---|---|
+| Swap a single word | ⇄ button next to that word | `PUT /api/words/{id}` with term/definition reversed |
+| Swap all words in the set | "Swap all ⇄" button in section header | `POST /api/sets/{setId}/words/swap` |
+
+`POST /api/sets/{setId}/words/swap` swaps `term ↔ definition` for every word in the set in a single DB round-trip and returns the updated `WordDto[]`. Only the set owner can call this endpoint.
 
 ---
 
@@ -123,6 +143,37 @@ This endpoint:
 1. Updates per-word `WordProgress` records
 2. Calls `StartTracking` / `RecordReview` / `Restart` on `SetProgress` → may advance the SRS stage
 3. Calls `UpsertDailyProgress` → increments today's word count for the activity chart
+
+---
+
+## Flashcards Mode
+
+**Route**: `/sets/:id/flashcards`
+
+### Controls
+- **Flip**: click card or press Space / ↑ / ↓
+- **Known**: press → or click green button → word added to `known` set
+- **Don't know**: press ← or click red button → word added to `unknown` set
+- Cards are shuffled on every start/restart
+
+### Front-side chooser
+The user can pick which side of the card faces up:
+
+| Setting | Front | Back |
+|---|---|---|
+| `term` (default) | Word + example | Translation |
+| `definition` | Translation | Word + example |
+
+The choice is persisted in `localStorage` (`fc_front_side`) and survives page reloads.
+
+### Auto-play
+- Toggleable button (persisted in `localStorage` as `fc_autoplay`)
+- When on: speaks the front side text automatically on every card change (150 ms delay)
+- Uses the set's `Language` for TTS when the term side is shown; `undefined` (browser default) for the definition side
+
+### Session completion
+- After the last card: `POST /api/progress/{setId}` with `errorCount=0` for known, `errorCount=1` for unknown
+- Updates SRS, WordProgress, and DailyProgress
 
 ---
 
