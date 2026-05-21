@@ -2,17 +2,38 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getSets, getReminders, type SetSummaryDto, type ReminderDto } from '../api/sets'
 import { getWeeklyProgress, getMonthlyProgress, type WeeklyDayDto } from '../api/progress'
+import { getWeeklyPlan, type PlanDayDto } from '../api/plan'
 import { Layout } from '../components/Layout'
 import { ReviewBanner } from '../components/ReviewBanner'
 import { ProgressBar } from '../components/ProgressBar'
 import { useLang } from '../context/LangContext'
 
 // SRS progression days shown in the UI
-const STAGE_DAYS = [1, 2, 4, 7, 14]
+export const STAGE_DAYS = [1, 2, 4, 7, 14]
 
 const DAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 
-/** Pip row showing "1 / 2 / 7 / 14" with colour-coded progress. */
+/**
+ * Returns the CSS class for a single pip at index `i` given the current `stage`.
+ *
+ * Stage semantics (after adding the day-4 interval):
+ *   stage 1 → day-1 review is PENDING   → pip 0 = current, pips 1-4 = future
+ *   stage 2 → day-2 review is PENDING   → pip 0 = done,    pip 1 = current
+ *   stage 3 → day-4 review is PENDING   → pips 0-1 = done, pip 2 = current
+ *   stage 4 → day-7 review is PENDING   → pips 0-2 = done, pip 3 = current
+ *   stage 5 → day-14 review is PENDING  → pips 0-3 = done, pip 4 = current
+ *   stage 6 → cycle complete            → all pips = done (violet)
+ *
+ * Mapping: pip i is "done" when stage > i+1, "current" when stage === i+1.
+ */
+export function pipClass(stage: number, i: number): string {
+  if (stage > STAGE_DAYS.length) return 'font-bold text-violet-500' // stage 6 = complete
+  if (i < stage - 1)            return 'font-bold text-violet-500' // completed pip
+  if (i === stage - 1)          return 'font-bold text-gray-700'   // current (due now)
+  return 'text-gray-300'                                            // future pip
+}
+
+/** Pip row showing "1 / 2 / 4 / 7 / 14" with colour-coded progress. */
 function StageProgress({ stage }: { stage: number }) {
   const { t } = useLang()
   return (
@@ -21,26 +42,14 @@ function StageProgress({ stage }: { stage: number }) {
       <span className="pointer-events-none absolute left-1/2 top-full z-10 mt-2 hidden -translate-x-1/2 whitespace-nowrap rounded-xl border border-gray-100 bg-white/70 px-3 py-2 text-xs text-gray-400 shadow-sm backdrop-blur-sm group-hover:block">
         {t('dashboard.stageTooltip')}
       </span>
-      {STAGE_DAYS.map((day, i) => {
-        let cls: string
-        if (stage > STAGE_DAYS.length - 1) {
-          cls = 'font-bold text-violet-500'
-        } else if (i < stage) {
-          cls = 'font-bold text-violet-500'
-        } else if (i === stage) {
-          cls = 'font-bold text-gray-700'
-        } else {
-          cls = 'text-gray-300'
-        }
-        return (
-          <span key={day}>
-            <span className={cls}>{day}</span>
-            {i < STAGE_DAYS.length - 1 && (
-              <span className="mx-0.5 text-gray-200">/</span>
-            )}
-          </span>
-        )
-      })}
+      {STAGE_DAYS.map((day, i) => (
+        <span key={day}>
+          <span className={pipClass(stage, i)}>{day}</span>
+          {i < STAGE_DAYS.length - 1 && (
+            <span className="mx-0.5 text-gray-200">/</span>
+          )}
+        </span>
+      ))}
     </span>
   )
 }
@@ -70,7 +79,8 @@ function ProgressWidget({ weeklyData }: { weeklyData: WeeklyDayDto[] }) {
   const data = isWeekly ? weeklyData : (monthlyData ?? [])
   const max = Math.max(...data.map(d => d.wordCount), 1)
   const BAR_HEIGHT = 72
-  const todayStr = new Date().toISOString().slice(0, 10)
+  const _now = new Date()
+  const todayStr = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`
 
   return (
     <div className="rounded-2xl border border-indigo-100 bg-indigo-50 p-5 shadow-sm">
@@ -160,6 +170,94 @@ function ProgressWidget({ weeklyData }: { weeklyData: WeeklyDayDto[] }) {
   )
 }
 
+/** Weekly bar chart — words PLANNED per day (from SRS schedule) */
+function PlanWidget() {
+  const { t, wl } = useLang()
+  const [data, setData] = useState<PlanDayDto[] | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; day: PlanDayDto } | null>(null)
+
+  useEffect(() => {
+    getWeeklyPlan()
+      .then(setData)
+      .finally(() => setLoading(false))
+  }, [])
+
+  const max = Math.max(...(data ?? []).map((d) => d.totalWords), 1)
+  const BAR_HEIGHT = 72
+  const _now = new Date()
+  const todayStr = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`
+  const DAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+
+  return (
+    <div className="rounded-2xl border border-violet-100 bg-violet-50 p-5 shadow-sm">
+      <div className="mb-4 flex items-center justify-between">
+        <p className="text-sm font-semibold text-gray-700">{t('plan.weeklyPlan')}</p>
+        <Link to="/plan" className="text-xs font-semibold text-violet-500 hover:underline">
+          {t('plan.viewAll')} →
+        </Link>
+      </div>
+
+      {/* Cursor-following tooltip */}
+      {tooltip && (
+        <div
+          className="pointer-events-none fixed z-50 rounded-xl border border-gray-100 bg-white/90 px-3 py-2 text-xs shadow-md backdrop-blur-sm"
+          style={{ left: tooltip.x, top: tooltip.y + 14, transform: 'translateX(-50%)' }}
+        >
+          <p className="font-semibold text-gray-700 mb-1">
+            {tooltip.day.totalWords} {wl(tooltip.day.totalWords)}
+          </p>
+          {tooltip.day.sets.map((s) => (
+            <p key={s.setId} className="text-gray-400">
+              {s.title}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {/* Bars */}
+      {loading ? (
+        <div className="flex justify-center" style={{ height: `${BAR_HEIGHT + 20}px` }}>
+          <div className="h-5 w-5 animate-spin self-center rounded-full border-2 border-violet-400 border-t-transparent" />
+        </div>
+      ) : (
+        <div className="flex gap-1.5">
+          {(data ?? []).map((d, i) => {
+            const isToday = d.date.slice(0, 10) === todayStr
+            const barPx = d.totalWords > 0
+              ? Math.max(Math.round((d.totalWords / max) * BAR_HEIGHT), 8)
+              : 6
+            const label = DAY_LETTERS[new Date(d.date.slice(0, 10) + 'T12:00:00Z').getDay()]
+
+            return (
+              <div
+                key={i}
+                className="flex flex-1 flex-col items-center gap-1 cursor-default"
+                onMouseMove={(e) => d.totalWords > 0 && setTooltip({ x: e.clientX, y: e.clientY, day: d })}
+                onMouseLeave={() => setTooltip(null)}
+              >
+                <div className="flex w-full items-end" style={{ height: `${BAR_HEIGHT}px` }}>
+                  <div
+                    className={`w-full rounded-t-full ${
+                      d.totalWords > 0
+                        ? isToday ? 'bg-violet-600' : 'bg-violet-300'
+                        : 'bg-violet-100'
+                    }`}
+                    style={{ height: `${barPx}px` }}
+                  />
+                </div>
+                <span className={`leading-none text-xs ${isToday ? 'font-semibold text-violet-700' : 'text-violet-400'}`}>
+                  {label}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const { t } = useLang()
   const [sets, setSets] = useState<SetSummaryDto[]>([])
@@ -220,6 +318,7 @@ export default function Dashboard() {
           <aside className="w-full lg:w-72 flex-shrink-0 flex flex-col gap-4">
             {reminders.length > 0 && <ReviewBanner reminders={reminders} />}
             {weeklyData.length > 0 && <ProgressWidget weeklyData={weeklyData} />}
+            <PlanWidget />
           </aside>
         </div>
       )}

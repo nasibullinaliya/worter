@@ -17,9 +17,10 @@ Backend: ASP.NET Core 8. Frontend: React + Vite. Database: PostgreSQL.
 | Database | PostgreSQL (hosted on Render) |
 | Auth | Google OAuth only — `@react-oauth/google` on the frontend, `GoogleJsonWebSignature` on the backend, JWT (7 days) |
 | TTS | Browser Web Speech API (no backend involvement) |
+| Drag & Drop | `@dnd-kit/core` + `@dnd-kit/utilities` (Plan page rescheduling) |
 | Frontend hosting | Vercel |
 | Backend hosting | Render |
-| Local dev DB | Docker Compose (postgres only) |
+| Local dev | Docker Compose (postgres + api + web) |
 
 ---
 
@@ -27,7 +28,7 @@ Backend: ASP.NET Core 8. Frontend: React + Vite. Database: PostgreSQL.
 
 ```
 vocab-app/
-├── docker-compose.yml          # local dev: postgres only
+├── docker-compose.yml          # local dev: postgres + api + web
 ├── .env.example
 ├── ARCHITECTURE.md
 ├── DATABASE.md
@@ -41,18 +42,23 @@ vocab-app/
 │       │   ├── WordsController.cs
 │       │   ├── ProgressController.cs
 │       │   ├── RemindersController.cs
+│       │   ├── PlanController.cs
 │       │   └── ExploreController.cs
 │       ├── Data/
 │       │   ├── AppDbContext.cs
 │       │   └── Migrations/
 │       ├── Models/
 │       ├── DTOs/
+│       │   └── PlanDtos.cs
+│       ├── Services/
+│       │   └── ReviewScheduler.cs
 │       ├── Program.cs
 │       └── appsettings.json
 └── frontend/
     └── src/
         ├── pages/
         │   ├── Dashboard.tsx
+        │   ├── Plan.tsx
         │   ├── SetDetail.tsx
         │   ├── SetNew.tsx
         │   ├── SetEdit.tsx
@@ -72,10 +78,16 @@ vocab-app/
         │   ├── QuizRunner.tsx
         │   ├── ReviewBanner.tsx
         │   └── StageProgress.tsx
-        └── api/
+        ├── api/
+        │   ├── client.ts
+        │   ├── plan.ts
+        │   ├── progress.ts
+        │   └── sets.ts
+        └── test/
+            └── pipClass.test.ts
 ```
 
-No `Services/` directory exists in the backend. Business logic lives directly in controllers.
+Business logic for SRS scheduling lives in `Services/ReviewScheduler.cs`.
 
 ---
 
@@ -111,6 +123,7 @@ Supported `Language` values: `de-DE`, `en-US`, `en-GB`, `fr-FR`, `es-ES`, `it-IT
 | Id | Guid | PK |
 | Term | string | the word being learned |
 | Definition | string | translation / definition |
+| Example | string? | optional usage example |
 | Position | int | order within the set |
 | SetId | Guid | FK → WordSet |
 
@@ -135,8 +148,8 @@ User's SRS progress on a set.
 | SetId | Guid | FK → WordSet |
 | FirstStudiedAt | DateTime | interval reference point |
 | LastStudiedAt | DateTime | |
-| NextReviewAt | DateTime? | null = complete (stage 4) or reset (stage 0) |
-| ReviewStage | int | 0..4 |
+| NextReviewAt | DateTime? | null = complete (stage 6) or not started (stage 0) |
+| ReviewStage | int | 0..6 |
 | KnownCount | int | words marked "known" in last session |
 | TotalWords | int | total words in set at time of last session |
 
@@ -147,12 +160,14 @@ Unique: (UserId, SetId)
 | Stage | Meaning | NextReviewAt |
 |---|---|---|
 | 0 | Reset / never studied | null |
-| 1 | First study done | FirstStudiedAt + 1 day |
-| 2 | Day-1 review done | FirstStudiedAt + 7 days |
-| 3 | Day-7 review done | FirstStudiedAt + 14 days |
-| 4 | Cycle complete | null |
+| 1 | After first study | FirstStudiedAt + 1 day |
+| 2 | After day-1 review | FirstStudiedAt + 2 days |
+| 3 | After day-2 review | FirstStudiedAt + 4 days |
+| 4 | After day-4 review | FirstStudiedAt + 7 days |
+| 5 | After day-7 review | FirstStudiedAt + 14 days |
+| 6 | Cycle complete | null |
 
-Grace period: if NextReviewAt is more than 3 days overdue → reset to stage 0 on next session.
+Grace period: if `NextReviewAt` is more than 3 days overdue → reset to stage 0 on next session.
 
 ### WordProgress
 | Field | Type | Description |
@@ -165,6 +180,15 @@ Grace period: if NextReviewAt is more than 3 days overdue → reset to stage 0 o
 | LastSeenAt | DateTime | |
 
 Unique: (UserId, WordId)
+
+### DailyProgress
+Per-user per-day word count for the activity chart.
+
+| Field | Type | Description |
+|---|---|---|
+| UserId | Guid | PK (composite) |
+| Date | DateOnly | PK (composite) |
+| WordCount | int | words studied on this date |
 
 ---
 
@@ -186,6 +210,7 @@ DELETE /api/sets/{id}             — delete own set
 GET    /api/sets/all-words        — all words from all user's sets (used by TestAll)
 POST   /api/sets/{id}/clone       — save public set to mine (creates UserSet record)
 DELETE /api/sets/{id}/clone       — remove saved set from mine
+POST   /api/sets/{id}/words/swap  — swap term ↔ definition for all words in a set
 ```
 
 ### Words
@@ -197,9 +222,19 @@ DELETE /api/words/{id}            — delete word
 
 ### Progress
 ```
-POST /api/progress/{setId}                        — record study session (updates SRS + WordProgress)
-POST /api/progress/words                          — record word-level known/unknown counts (WordProgress only, no SRS)
+POST /api/progress/{setId}                        — record study session (updates SRS + WordProgress + DailyProgress)
+POST /api/progress/words                          — record word-level results (WordProgress + DailyProgress only, no SRS)
+GET  /api/progress/weekly                         — word counts for Mon–Sun of the current week
+GET  /api/progress/monthly                        — word counts for the last 30 days
 GET  /api/progress/weakest-words?setIds=&count=N  — get N weakest words ranked by WordProgress
+```
+
+### Plan
+```
+GET   /api/plan/weekly?from=YYYY-MM-DD  — Mon–Sun of the week containing `from` (defaults to current week)
+                                          Includes overdue sets (within 3-day grace period) on today's date
+PATCH /api/plan/{setId}/reschedule      — move NextReviewAt to a new date (body: { date: "YYYY-MM-DD" })
+                                          Only for stages 1–5; target date must be >= today
 ```
 
 ### Reminders
@@ -238,9 +273,11 @@ TTS is handled entirely in the browser using the Web Speech API (`SpeechSynthesi
 
 Intervals from `FirstStudiedAt`:
 - Stage 1 → +1 day
-- Stage 2 → +7 days
-- Stage 3 → +14 days
-- Stage 4 → null (done)
+- Stage 2 → +2 days
+- Stage 3 → +4 days
+- Stage 4 → +7 days
+- Stage 5 → +14 days
+- Stage 6 → null (complete)
 
 Stage advances only if `NextReviewAt.Date <= today`. Multiple sessions on the same day do not double-advance. Grace period: >3 days overdue → reset to stage 0.
 
@@ -265,24 +302,13 @@ Frontend parser: line-by-line → split on first `-` or `\t` → array of `{term
 
 ## Local Development
 
-Docker Compose is used **only** for running a local PostgreSQL instance. The backend and frontend are run directly (not in Docker) in local development. Production deployments do not use Docker.
+Docker Compose runs the full stack locally: PostgreSQL, .NET API, and the Vite frontend.
 
-```yaml
-# docker-compose.yml — local postgres only
-services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: vocab
-      POSTGRES_USER: vocab
-      POSTGRES_PASSWORD: vocab
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-
-volumes:
-  postgres_data:
 ```
+docker compose up --build -d
+```
+
+- Frontend: http://localhost:5173
+- API: http://localhost:8080
 
 Migrations are applied automatically on API startup (`db.Database.Migrate()` in `Program.cs`).

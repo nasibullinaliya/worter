@@ -6,6 +6,7 @@ const T = {
     'nav.mySets': 'Мои наборы',
     'nav.today': 'Сегодня',
     'nav.explore': 'Обзор',
+    'nav.plan': 'План',
     'nav.logout': 'Выйти',
 
     // today
@@ -47,7 +48,7 @@ const T = {
     'dashboard.notStudied': 'Ещё не изучался',
     'dashboard.completed': 'Завершён',
     'dashboard.saved': '(сохранён)',
-    'dashboard.stageTooltip': 'Интервальное повторение на 1й, 2й, 7й и 14й день.',
+    'dashboard.stageTooltip': 'Интервальное повторение на 1й, 2й, 4й, 7й и 14й день.',
     'dashboard.known': 'знаю',
     'dashboard.deleteConfirm': 'Удалить набор?',
     'dashboard.weeklyProgress': 'Прогресс за неделю',
@@ -214,12 +215,33 @@ const T = {
 
     // reminder
     'reminder.timeToReview': 'Пора повторить:',
+
+    // plan
+    'plan.title': 'План занятий',
+    'plan.week': 'Неделя',
+    'plan.month': 'Месяц',
+    'plan.weeklyPlan': 'Недельный план',
+    'plan.monthlyPlan': 'Месячный план',
+    'plan.viewAll': 'Открыть план',
+    'plan.viewMonthly': 'Месячный план',
+    'plan.viewWeekly': 'Недельный план',
+    'plan.noReviews': 'Нет повторений',
+    'plan.empty': 'Нет запланированных повторений',
+    'plan.today': 'Сегодня',
+    'plan.past': 'Прошедший день',
+    'plan.upcoming': 'Запланировано',
+    'plan.startStudy': 'Начать учить',
+    'plan.dragHint': 'Перетащите набор на другой день чтобы перенести повторение',
+    'plan.dropHere': '+ перенести сюда',
+    'plan.overdue': 'Долг',
+    'plan.graceDaysLeft': 'дн. без потери прогресса',
   },
 
   en: {
     'nav.mySets': 'My Sets',
     'nav.today': 'Today',
     'nav.explore': 'Explore',
+    'nav.plan': 'Plan',
     'nav.logout': 'Log out',
 
     'today.title': "Today's Review",
@@ -257,7 +279,7 @@ const T = {
     'dashboard.notStudied': 'Not studied yet',
     'dashboard.completed': 'Completed',
     'dashboard.saved': '(saved)',
-    'dashboard.stageTooltip': 'Spaced repetition on day 1, 2, 7 and 14.',
+    'dashboard.stageTooltip': 'Spaced repetition on day 1, 2, 4, 7 and 14.',
     'dashboard.known': 'known',
     'dashboard.deleteConfirm': 'Delete set?',
     'dashboard.weeklyProgress': 'Weekly Progress',
@@ -418,12 +440,33 @@ const T = {
     'quiz.allTitle': 'Test — All Sets',
 
     'reminder.timeToReview': 'Time to review:',
+
+    // plan
+    'plan.title': 'Study Plan',
+    'plan.week': 'Week',
+    'plan.month': 'Month',
+    'plan.weeklyPlan': 'Weekly Plan',
+    'plan.monthlyPlan': 'Monthly Plan',
+    'plan.viewAll': 'Open plan',
+    'plan.viewMonthly': 'Monthly plan',
+    'plan.viewWeekly': 'Weekly plan',
+    'plan.noReviews': 'No reviews',
+    'plan.empty': 'No scheduled reviews',
+    'plan.today': 'Today',
+    'plan.past': 'Past',
+    'plan.upcoming': 'Upcoming',
+    'plan.startStudy': 'Start studying',
+    'plan.dragHint': 'Drag a set to another day to reschedule',
+    'plan.dropHere': '+ drop here',
+    'plan.overdue': 'Overdue',
+    'plan.graceDaysLeft': 'days left without losing progress',
   },
 
   de: {
     'nav.mySets': 'Meine Sets',
     'nav.today': 'Heute',
     'nav.explore': 'Erkunden',
+    'nav.plan': 'Plan',
     'nav.logout': 'Abmelden',
 
     'today.title': 'Heute fällig',
@@ -461,7 +504,7 @@ const T = {
     'dashboard.notStudied': 'Noch nicht gelernt',
     'dashboard.completed': 'Abgeschlossen',
     'dashboard.saved': '(gespeichert)',
-    'dashboard.stageTooltip': 'Wiederholung am 1., 2., 7. und 14. Tag.',
+    'dashboard.stageTooltip': 'Wiederholung am 1., 2., 4., 7. und 14. Tag.',
     'dashboard.known': 'gelernt',
     'dashboard.deleteConfirm': 'Set löschen?',
     'dashboard.weeklyProgress': 'Wochenfortschritt',
@@ -622,6 +665,26 @@ const T = {
     'quiz.allTitle': 'Test — Alle Sets',
 
     'reminder.timeToReview': 'Zeit zum Wiederholen:',
+
+    // plan
+    'plan.title': 'Lernplan',
+    'plan.week': 'Woche',
+    'plan.month': 'Monat',
+    'plan.weeklyPlan': 'Wochenplan',
+    'plan.monthlyPlan': 'Monatsplan',
+    'plan.viewAll': 'Plan öffnen',
+    'plan.viewMonthly': 'Monatsplan',
+    'plan.viewWeekly': 'Wochenplan',
+    'plan.noReviews': 'Keine Wiederholungen',
+    'plan.empty': 'Keine geplanten Wiederholungen',
+    'plan.today': 'Heute',
+    'plan.past': 'Vergangen',
+    'plan.upcoming': 'Geplant',
+    'plan.startStudy': 'Lernen starten',
+    'plan.dragHint': 'Set auf einen anderen Tag ziehen um zu verschieben',
+    'plan.dropHere': '+ hier ablegen',
+    'plan.overdue': 'Überfällig',
+    'plan.graceDaysLeft': 'Tage ohne Fortschrittsverlust',
   },
 } as const
 

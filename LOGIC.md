@@ -101,15 +101,15 @@ For `SetEdit`, terms that already exist in the **current** set are excluded from
 
 ### Intervals (absolute days from `FirstStudiedAt`)
 
-| Stage | Meaning | NextReviewAt |
-|---|---|---|
-| 0 | Reset / never studied | null |
-| 1 | First study session completed | FirstStudiedAt + 1 day |
-| 2 | Day-1 review completed | FirstStudiedAt + 2 days |
-| 3 | Day-2 review completed | FirstStudiedAt + 4 days |
-| 4 | Day-4 review completed | FirstStudiedAt + 7 days |
-| 5 | Day-7 review completed | FirstStudiedAt + 14 days |
-| 6 | Cycle complete | null (no longer appears in reminders) |
+| Stage | When it is set | Review due at | NextReviewAt |
+|---|---|---|---|
+| 0 | Reset / never studied | — | null |
+| 1 | After first study session | day 1 | FirstStudiedAt + 1 day |
+| 2 | After day-1 review | day 2 | FirstStudiedAt + 2 days |
+| 3 | After day-2 review | day 4 | FirstStudiedAt + 4 days |
+| 4 | After day-4 review | day 7 | FirstStudiedAt + 7 days |
+| 5 | After day-7 review | day 14 | FirstStudiedAt + 14 days |
+| 6 | After day-14 review — cycle complete | — | null (no longer appears in reminders) |
 
 ### Stage Advancement Rules
 - **First session** (`SetProgress` does not exist yet) → `StartTracking`: stage=1, NextReviewAt = today+1
@@ -281,6 +281,41 @@ The session ends only when **all words** pass both phases. By definition, `doneI
 - "Start test" button → `/sets/:id/test`
 - After completing a test the set disappears on next page load (NextReviewAt moves to the future)
 - Sets overdue by >3 days are reset (stage=0) on the next study session; they still appear on Today until studied
+
+---
+
+## Plan Page (`/plan`)
+
+Weekly view of the SRS review schedule. Shows how many words are due per day.
+
+### Layout
+- Week navigation with ← → arrows; label format: `18–24 May` (uses local date, not UTC)
+- "Today" button appears when viewing a non-current week
+- Clicking a day column opens a side panel listing the sets due that day with a "Start study" button
+
+### Data source
+`GET /api/plan/weekly?from=YYYY-MM-DD` returns 7 `PlanDayDto` objects (Mon–Sun) containing:
+- `date` — ISO date string
+- `totalWords` — total words across all sets due that day
+- `sets[]` — list of `PlanSetItemDto` with `setId`, `title`, `totalWords`, `isOverdue`, `graceDaysLeft`
+
+### Overdue sets
+Sets whose `NextReviewAt` is in the past but within the 3-day grace period are:
+- Included in today's plan (not their original due date)
+- Marked with an amber "Долг" badge and a countdown of remaining grace days
+- Visually distinct (amber chip colour vs. indigo for on-time sets)
+
+### Drag & drop rescheduling
+- Sets can be dragged between day columns using `@dnd-kit/core`
+- Drop triggers `PATCH /api/plan/{setId}/reschedule { date }` → updates `NextReviewAt`
+- Constraints: target date ≥ today; only stages 1–5 can be rescheduled
+- Drag activates after 8 px pointer movement (prevents accidental drags on click)
+
+### Dashboard widget
+- `PlanWidget` on the Dashboard sidebar shows the current week as a bar chart (violet)
+- Bars represent `totalWords` per day; today's bar is highlighted darker
+- Hover tooltip shows word count + set names for that day
+- "View all →" link navigates to `/plan`
 
 ---
 

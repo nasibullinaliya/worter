@@ -11,7 +11,8 @@ Users
  ├── WordSets (OwnerId) — sets the user created
  ├── UserSets (UserId) — public sets the user saved
  ├── SetProgress (UserId) — SRS progress per set
- └── WordProgress (UserId) — per-word study statistics
+ ├── WordProgress (UserId) — per-word study statistics
+ └── DailyProgress (UserId) — words studied per day (activity chart)
 
 WordSets
  ├── Words (SetId) — words in the set
@@ -79,6 +80,7 @@ Words inside a set. Each word belongs to one set.
 | `Id` | `uuid` | PK | Unique word identifier |
 | `Term` | `text` | NOT NULL | Word / term (the thing being learned) |
 | `Definition` | `text` | NOT NULL | Translation / definition |
+| `Example` | `text` | nullable | Optional usage example sentence. Shown in italic in SetDetail, SetEdit, and on flashcards |
 | `Position` | `integer` | NOT NULL | Order of the word in the set (0-based), used for sorting |
 | `SetId` | `uuid` | NOT NULL, FK → `WordSets.Id` | Set this word belongs to |
 
@@ -121,7 +123,7 @@ SRS (Spaced Repetition System) progress for a specific user on a specific set. R
 | `SetId` | `uuid` | NOT NULL, FK → `WordSets.Id` | Set |
 | `FirstStudiedAt` | `timestamptz` | NOT NULL | Date of first study session. Used as the reference point for SRS interval calculations |
 | `LastStudiedAt` | `timestamptz` | NOT NULL | Date of most recent study session |
-| `NextReviewAt` | `timestamptz` | nullable | Date of next scheduled review (stored as midnight UTC). `NULL` means either the cycle is complete (stage 4) or the cycle was reset (stage 0) |
+| `NextReviewAt` | `timestamptz` | nullable | Date of next scheduled review (stored as midnight UTC). `NULL` means either the cycle is complete (stage 6) or the cycle was reset (stage 0) |
 | `ReviewStage` | `integer` | NOT NULL | Current SRS stage (see below) |
 | `KnownCount` | `integer` | NOT NULL | Number of words marked "known" in the last session |
 | `TotalWords` | `integer` | NOT NULL | Total number of words in the set at the time of the last session |
@@ -137,15 +139,19 @@ SRS (Spaced Repetition System) progress for a specific user on a specific set. R
 
 #### SRS Stages (`ReviewStage`)
 
-| Stage | Meaning | `NextReviewAt` |
-|---|---|---|
-| `0` | Cycle reset (grace period expired) — must start over | `NULL` |
-| `1` | First study session completed | `FirstStudiedAt + 1 day` |
-| `2` | Day-1 review completed | `FirstStudiedAt + 7 days` |
-| `3` | Day-7 review completed | `FirstStudiedAt + 14 days` |
-| `4` | Cycle complete | `NULL` |
+| Stage | When it is set | Review due at | `NextReviewAt` |
+|---|---|---|---|
+| `0` | Cycle reset — must start over | — | `NULL` |
+| `1` | After first study session | day 1 | `FirstStudiedAt + 1 day` |
+| `2` | After day-1 review | day 2 | `FirstStudiedAt + 2 days` |
+| `3` | After day-2 review | day 4 | `FirstStudiedAt + 4 days` |
+| `4` | After day-4 review | day 7 | `FirstStudiedAt + 7 days` |
+| `5` | After day-7 review | day 14 | `FirstStudiedAt + 14 days` |
+| `6` | After day-14 review — cycle complete | — | `NULL` |
 
-**Grace period:** if `NextReviewAt` is more than 3 days overdue, the cycle is automatically reset to stage 0 on the next study session.
+`NextReviewAt` is always calculated from `FirstStudiedAt` (absolute schedule), never from the date of the last session.
+
+**Grace period:** if `NextReviewAt` is more than 3 days overdue, the next study session calls `Restart` — the cycle restarts from stage 1 with a new `FirstStudiedAt`.
 
 **No double-advance:** stage advances only if `NextReviewAt.Date <= today`. Multiple sessions on the same day do not advance the stage more than once.
 
@@ -174,6 +180,24 @@ Per-word statistics — how many times each word was marked "known" or "unknown"
 
 ---
 
+### `DailyProgress`
+
+Words studied per day — used for the activity chart on the Dashboard.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `UserId` | `uuid` | PK, FK → `Users.Id` | User |
+| `Date` | `date` | PK | Calendar day (UTC) |
+| `WordCount` | `integer` | NOT NULL | Number of words studied that day (accumulated — studying the same set twice adds up) |
+
+**Primary key:** composite `(UserId, Date)` — one row per user per day.
+
+Written by `UpsertDailyProgress` on every `POST /api/progress/{setId}` and `POST /api/progress/words`. If a row for today already exists, `WordCount` is incremented; otherwise a new row is inserted.
+
+**Cascade delete:** deleting `Users` → deletes all `DailyProgress` records for that user.
+
+---
+
 ## Migrations
 
 | File | What it does |
@@ -183,5 +207,8 @@ Per-word statistics — how many times each word was marked "known" or "unknown"
 | `20260513111010_AddGoogleAuth` | Removes `PasswordHash`, adds `GoogleId` and `AvatarUrl` to `Users` |
 | `20260514000000_FixSetProgressDates` | Data migration: fixes corrupted `SetProgress` records (stage=0 with non-null date; time component in `NextReviewAt`) |
 | `20260514134800_AddLanguageToWordSets` | Adds `Language` TEXT column to `WordSets`, default `'de-DE'` |
+| `20260515_AddExampleToWords` | Adds nullable `Example` TEXT column to `Words` |
+| `20260516_AddDailyProgress` | Creates `DailyProgress` table |
+| `20260521_AddIntervalStage4` | Adds day-4 stage to SRS interval chain `[1,2,7,14]` → `[1,2,4,7,14]`. Requires one-time data migration (see LOGIC.md) to remap existing `SetProgress` records at old stages 3–5 |
 
 Migrations are applied automatically on API startup (`db.Database.Migrate()` in `Program.cs`).

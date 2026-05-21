@@ -110,6 +110,9 @@ export function Layout({ children, reminderCount }: Props) {
                 <Link to="/explore" className={navCls('/explore')}>
                   {t('nav.explore')}
                 </Link>
+                <Link to="/plan" className={navCls('/plan')}>
+                  {t('nav.plan')}
+                </Link>
               </nav>
             </div>
 
@@ -145,6 +148,9 @@ export function Layout({ children, reminderCount }: Props) {
             </Link>
             <Link to="/explore" className={navCls('/explore')}>
               {t('nav.explore')}
+            </Link>
+            <Link to="/plan" className={navCls('/plan')}>
+              {t('nav.plan')}
             </Link>
           </nav>
         </div>
