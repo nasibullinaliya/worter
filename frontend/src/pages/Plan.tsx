@@ -118,15 +118,28 @@ function DetailPanel({ day, onClose }: { day: PlanDayDto; onClose: () => void })
                   </p>
                 )}
                 {!past && (
-                  <Link
-                    to={`/sets/${s.setId}/test`}
-                    className={`block w-full rounded-xl py-2 text-center text-xs font-semibold text-white transition-colors ${
-                      s.isOverdue ? 'bg-amber-500 hover:bg-amber-600' : 'bg-violet-600 hover:bg-violet-700'
-                    }`}
-                    onClick={onClose}
-                  >
-                    {t('plan.startStudy')} →
-                  </Link>
+                  <div className="flex gap-2 mt-1">
+                    <Link
+                      to={`/sets/${s.setId}/flashcards`}
+                      className={`flex-1 rounded-xl py-2 text-center text-xs font-semibold transition-colors ${
+                        s.isOverdue
+                          ? 'border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                          : 'border border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100'
+                      }`}
+                      onClick={onClose}
+                    >
+                      {t('plan.startStudy')}
+                    </Link>
+                    <Link
+                      to={`/sets/${s.setId}/test`}
+                      className={`flex-1 rounded-xl py-2 text-center text-xs font-semibold text-white transition-colors ${
+                        s.isOverdue ? 'bg-amber-500 hover:bg-amber-600' : 'bg-violet-600 hover:bg-violet-700'
+                      }`}
+                      onClick={onClose}
+                    >
+                      {t('plan.startTest')}
+                    </Link>
+                  </div>
                 )}
               </div>
             ))
@@ -243,7 +256,7 @@ function DroppableDayColumn({
 // ── Weekly view ───────────────────────────────────────────────────────────────
 
 function WeekView({ data, onUpdateData }: { data: PlanDayDto[]; onUpdateData: (d: PlanDayDto[]) => void }) {
-  const { lang } = useLang()
+  const { lang, t, wl } = useLang()
   const dayLetters = getDayLetters(lang)
   const [activeItem, setActiveItem] = useState<{ set: PlanSetItemDto; dateStr: string } | null>(null)
   const [selectedDay, setSelectedDay] = useState<PlanDayDto | null>(null)
@@ -294,7 +307,9 @@ function WeekView({ data, onUpdateData }: { data: PlanDayDto[]; onUpdateData: (d
   return (
     <>
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-7 gap-2">
+
+        {/* Desktop: 7-column grid */}
+        <div className="hidden sm:grid grid-cols-7 gap-2">
           {data.map((day, i) => (
             <DroppableDayColumn
               key={day.date}
@@ -307,6 +322,65 @@ function WeekView({ data, onUpdateData }: { data: PlanDayDto[]; onUpdateData: (d
               ))}
             </DroppableDayColumn>
           ))}
+        </div>
+
+        {/* Mobile: vertical list */}
+        <div className="flex flex-col gap-2 sm:hidden">
+          {data.map((day, i) => {
+            const today = isToday(day.date)
+            const past = isPast(day.date)
+            const dateStr = day.date.slice(0, 10)
+            const dayNum = new Date(dateStr + 'T12:00:00Z').getUTCDate()
+            return (
+              <div
+                key={day.date}
+                onClick={() => setSelectedDay(day)}
+                className={`flex items-center gap-3 rounded-2xl border px-4 py-3 cursor-pointer transition-all ${
+                  today ? 'border-violet-400 bg-violet-50 shadow-md'
+                  : past ? 'border-gray-100 bg-gray-50/60'
+                  : 'border-gray-100 bg-white shadow-sm hover:shadow-md'
+                }`}
+              >
+                {/* Day + date */}
+                <div className="w-12 shrink-0">
+                  <p className={`text-[10px] font-semibold uppercase tracking-wide ${today ? 'text-violet-500' : 'text-gray-400'}`}>
+                    {dayLetters[i]}
+                  </p>
+                  <p className={`text-lg font-bold leading-tight ${today ? 'text-violet-700' : past ? 'text-gray-300' : 'text-gray-800'}`}>
+                    {dayNum}
+                  </p>
+                </div>
+
+                {/* Chips */}
+                <div className="flex flex-1 flex-wrap gap-1.5 min-w-0">
+                  {day.sets.length === 0 ? (
+                    <span className="text-xs text-gray-300">{t('plan.noReviews')}</span>
+                  ) : (
+                    day.sets.map((set) => (
+                      <span
+                        key={set.setId}
+                        className={`rounded-lg px-2 py-0.5 text-[11px] font-medium ${
+                          past ? 'bg-gray-100 text-gray-400'
+                          : set.isOverdue ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                          : 'bg-indigo-50 text-indigo-700'
+                        }`}
+                      >
+                        {set.isOverdue && <span className="mr-0.5">⚠</span>}
+                        {set.title}
+                      </span>
+                    ))
+                  )}
+                </div>
+
+                {/* Word count */}
+                {day.sets.length > 0 && (
+                  <p className={`shrink-0 text-xs tabular-nums ${today ? 'text-violet-400' : 'text-gray-300'}`}>
+                    {day.totalWords} {wl(day.totalWords)}
+                  </p>
+                )}
+              </div>
+            )
+          })}
         </div>
 
         <DragOverlay dropAnimation={null}>
