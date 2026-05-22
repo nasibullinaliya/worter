@@ -44,3 +44,11 @@ public record AllWordsItemDto(
 );
 
 public record WeeklyDayDto(DateTime Date, int WordCount);
+
+public record SetStudyLogDto(
+    DateTime StudiedAt,
+    int StageBefore,
+    int StageAfter,
+    DateTime? NextReviewAtAfter,
+    int KnownCount,
+    int TotalWords);

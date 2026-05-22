@@ -68,3 +68,15 @@ export const getWeeklyProgress = () =>
 
 export const getMonthlyProgress = () =>
   client.get<WeeklyDayDto[]>('/api/progress/monthly').then((r) => r.data)
+
+export interface SetStudyLogDto {
+  studiedAt: string
+  stageBefore: number
+  stageAfter: number
+  nextReviewAtAfter: string | null
+  knownCount: number
+  totalWords: number
+}
+
+export const getStudyHistory = (setId: string) =>
+  client.get<SetStudyLogDto[]>(`/api/progress/${setId}/history`).then((r) => r.data)

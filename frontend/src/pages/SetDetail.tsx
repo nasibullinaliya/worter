@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { getSet, deleteSet, cloneSet, uncloneSet, type SetDetailDto } from '../api/sets'
+import { getStudyHistory, type SetStudyLogDto } from '../api/progress'
 import { Layout } from '../components/Layout'
 import { SpeakButton } from '../components/SpeakButton'
 import { useLang } from '../context/LangContext'
@@ -14,6 +15,9 @@ export default function SetDetail() {
   const [error, setError] = useState('')
   const [cloneStatus, setCloneStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [removing, setRemoving] = useState(false)
+  const [history, setHistory] = useState<SetStudyLogDto[] | null>(null)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [historyLoading, setHistoryLoading] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -59,6 +63,22 @@ export default function SetDetail() {
     } catch {
       setRemoving(false)
     }
+  }
+
+  const handleToggleHistory = async () => {
+    if (!id) return
+    if (!historyOpen && history === null) {
+      setHistoryLoading(true)
+      try {
+        const data = await getStudyHistory(id)
+        setHistory(data)
+      } catch {
+        setHistory([])
+      } finally {
+        setHistoryLoading(false)
+      }
+    }
+    setHistoryOpen((prev) => !prev)
   }
 
   if (loading) return (
@@ -205,6 +225,68 @@ export default function SetDetail() {
               <span className="w-1/2 text-sm text-gray-500">{word.definition}</span>
             </div>
           ))}
+        </div>
+      )}
+      {/* Study history */}
+      {(set.isOwner || set.isSaved) && (
+        <div className="mt-6">
+          <button
+            onClick={handleToggleHistory}
+            className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors"
+          >
+            <span className={`inline-block transition-transform ${historyOpen ? 'rotate-90' : ''}`}>▶</span>
+            Study history
+          </button>
+
+          {historyOpen && (
+            <div className="mt-3 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+              {historyLoading ? (
+                <div className="flex justify-center py-8">
+                  <div className="h-6 w-6 animate-spin rounded-full border-4 border-violet-600 border-t-transparent" />
+                </div>
+              ) : !history || history.length === 0 ? (
+                <p className="px-5 py-4 text-sm text-gray-400">No sessions recorded yet.</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100 text-left text-xs font-medium text-gray-400">
+                      <th className="px-5 py-3">Date</th>
+                      <th className="px-5 py-3">Stage</th>
+                      <th className="px-5 py-3">Next review</th>
+                      <th className="px-5 py-3">Known</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {history.map((log, i) => {
+                      const studiedAt = new Date(log.studiedAt)
+                      const nextReview = log.nextReviewAtAfter ? new Date(log.nextReviewAtAfter) : null
+                      return (
+                        <tr
+                          key={i}
+                          className={`${i !== history.length - 1 ? 'border-b border-gray-50' : ''}`}
+                        >
+                          <td className="px-5 py-3 text-gray-700">
+                            {studiedAt.toLocaleDateString()} {studiedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </td>
+                          <td className="px-5 py-3 text-gray-700">
+                            {log.stageBefore} → {log.stageAfter}
+                          </td>
+                          <td className="px-5 py-3 text-gray-700">
+                            {nextReview
+                              ? nextReview.toLocaleDateString()
+                              : <span className="text-green-600 font-medium">Complete</span>}
+                          </td>
+                          <td className="px-5 py-3 text-gray-700">
+                            {log.knownCount}/{log.totalWords}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
         </div>
       )}
     </Layout>

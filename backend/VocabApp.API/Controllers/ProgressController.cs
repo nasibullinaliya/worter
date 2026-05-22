@@ -66,6 +66,7 @@ public class ProgressController(AppDbContext db) : ControllerBase
 
         // Upsert SetProgress
         var setProgress = await db.SetProgress.FirstOrDefaultAsync(p => p.UserId == userId && p.SetId == setId);
+        var stageBefore = setProgress?.ReviewStage ?? 0;
         if (setProgress == null)
         {
             setProgress = ReviewScheduler.StartTracking(userId, setId, knownCount, wordIds.Count);
@@ -81,6 +82,20 @@ public class ProgressController(AppDbContext db) : ControllerBase
         {
             ReviewScheduler.RecordReview(setProgress, knownCount, wordIds.Count);
         }
+
+        // Write study history log
+        db.SetStudyLogs.Add(new SetStudyLog
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            SetId = setId,
+            StudiedAt = now,
+            StageBefore = stageBefore,
+            StageAfter = setProgress.ReviewStage,
+            NextReviewAtAfter = setProgress.NextReviewAt,
+            KnownCount = setProgress.KnownCount,
+            TotalWords = setProgress.TotalWords,
+        });
 
         // Record daily progress
         await UpsertDailyProgress(userId, resultMap.Count);
@@ -124,6 +139,34 @@ public class ProgressController(AppDbContext db) : ControllerBase
             .ToList();
 
         return Ok(new ProgressDetailDto(setProgress != null ? ToDto(setProgress) : null, wordItems));
+    }
+
+    // GET /api/progress/{setId}/history
+    [HttpGet("{setId:guid}/history")]
+    public async Task<IActionResult> GetStudyHistory(Guid setId)
+    {
+        var userId = User.GetUserId();
+
+        var set = await db.WordSets.FirstOrDefaultAsync(s => s.Id == setId);
+        if (set == null) return NotFound();
+
+        var isOwner = set.OwnerId == userId;
+        var isSaved = await db.UserSets.AnyAsync(us => us.UserId == userId && us.SetId == setId);
+        if (!isOwner && !isSaved) return Forbid();
+
+        var logs = await db.SetStudyLogs
+            .Where(l => l.UserId == userId && l.SetId == setId)
+            .OrderByDescending(l => l.StudiedAt)
+            .Select(l => new SetStudyLogDto(
+                l.StudiedAt,
+                l.StageBefore,
+                l.StageAfter,
+                l.NextReviewAtAfter,
+                l.KnownCount,
+                l.TotalWords))
+            .ToListAsync();
+
+        return Ok(logs);
     }
 
     // POST /api/progress/words — record word-level progress without SRS (multi-set sessions, quiz)

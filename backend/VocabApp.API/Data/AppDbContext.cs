@@ -12,6 +12,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<SetProgress> SetProgress => Set<SetProgress>();
     public DbSet<WordProgress> WordProgress => Set<WordProgress>();
     public DbSet<DailyProgress> DailyProgress => Set<DailyProgress>();
+    public DbSet<SetStudyLog> SetStudyLogs => Set<SetStudyLog>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -94,6 +95,21 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(p => p.Word)
              .WithMany(w => w.Progress)
              .HasForeignKey(p => p.WordId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<SetStudyLog>(e =>
+        {
+            e.HasKey(l => l.Id);
+            e.HasIndex(l => new { l.UserId, l.SetId });
+            e.HasIndex(l => new { l.UserId, l.SetId, l.StudiedAt });
+            e.HasOne(l => l.User)
+             .WithMany()
+             .HasForeignKey(l => l.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(l => l.Set)
+             .WithMany()
+             .HasForeignKey(l => l.SetId)
              .OnDelete(DeleteBehavior.Cascade);
         });
     }
