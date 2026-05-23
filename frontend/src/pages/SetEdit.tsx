@@ -140,6 +140,28 @@ export default function SetEdit() {
     }
   }
 
+  // ── Duplicate detection ───────────────────────────────────────────────────
+  const intraDups = useMemo(() => {
+    if (!set) return new Set<string>()
+    const count = new Map<string, number>()
+    for (const w of set.words) {
+      const k = w.term.toLowerCase().trim()
+      count.set(k, (count.get(k) ?? 0) + 1)
+    }
+    return new Set([...count.entries()].filter(([, c]) => c > 1).map(([k]) => k))
+  }, [set?.words])
+
+  const crossMap = useMemo(() => {
+    const map = new Map<string, string[]>()
+    for (const w of allUserWords) {
+      if (w.setId === set?.id) continue
+      const k = w.term.toLowerCase().trim()
+      if (!map.has(k)) map.set(k, [])
+      if (!map.get(k)!.includes(w.setTitle)) map.get(k)!.push(w.setTitle)
+    }
+    return map
+  }, [allUserWords, set?.id])
+
   const handleSwapAll = async () => {
     if (!set || swappingAll) return
     setSwappingAll(true)
@@ -370,7 +392,31 @@ export default function SetEdit() {
                 <div className="flex items-center gap-4">
                   <span className="w-6 shrink-0 text-sm text-gray-300">{i + 1}</span>
                   <div className="flex-1 min-w-0">
-                    <span className="font-medium text-gray-900">{word.term}</span>
+                    <span className="flex items-center gap-1.5 font-medium text-gray-900">
+                      {word.term}
+                      {intraDups.has(word.term.toLowerCase().trim()) && (
+                        <span className="group relative cursor-default">
+                          <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">×2</span>
+                          <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 hidden -translate-x-1/2 whitespace-nowrap rounded-xl border border-gray-100 bg-white px-3 py-2 text-xs text-gray-500 shadow-md group-hover:block">
+                            {t('set.dupInSet')}
+                          </span>
+                        </span>
+                      )}
+                      {(crossMap.get(word.term.toLowerCase().trim()) ?? []).length > 0 && (() => {
+                        const sets = crossMap.get(word.term.toLowerCase().trim())!
+                        return (
+                          <span className="group relative cursor-default">
+                            <span className="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-600">
+                              {sets.length === 1 ? sets[0] : `${sets.length} sets`}
+                            </span>
+                            <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 hidden -translate-x-1/2 whitespace-nowrap rounded-xl border border-gray-100 bg-white px-3 py-2 text-xs text-gray-500 shadow-md group-hover:block">
+                              <span className="block font-semibold text-gray-700 mb-1">{t('set.inOtherSets')}:</span>
+                              {sets.map((s) => <span key={s} className="block">{s}</span>)}
+                            </span>
+                          </span>
+                        )
+                      })()}
+                    </span>
                     {word.example && (
                       <p className="mt-0.5 text-xs italic text-gray-400 truncate">{word.example}</p>
                     )}
