@@ -72,6 +72,7 @@ export default function SetNew() {
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">{t('form.title')}</label>
             <input
+                spellCheck={false}
               type="text"
               required
               value={title}
@@ -84,6 +85,7 @@ export default function SetNew() {
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">{t('form.description')}</label>
             <input
+                spellCheck={false}
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -135,6 +137,7 @@ export default function SetNew() {
             <div className="mb-2 flex items-center gap-2">
               <span className="text-sm text-gray-500">{t('form.separator')}:</span>
               <input
+                  spellCheck={false}
                 type="text"
                 value={separator}
                 onChange={(e) => setSeparator(e.target.value)}
@@ -145,6 +148,7 @@ export default function SetNew() {
               </span>
             </div>
             <textarea
+                spellCheck={false}
               value={importText}
               onChange={(e) => setImportText(e.target.value)}
               rows={8}

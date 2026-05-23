@@ -231,6 +231,7 @@ export function QuizRunner({
 
                 {mode === 'type' ? (
                   <input
+                      spellCheck={false}
                     value={answers[word.wordId] ?? ''}
                     onChange={(e) =>
                       setAnswers((prev) => ({ ...prev, [word.wordId]: e.target.value }))

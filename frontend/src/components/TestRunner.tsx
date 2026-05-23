@@ -660,6 +660,7 @@ export function TestRunner({
             <>
               <div className="flex gap-2">
                 <input
+                    spellCheck={false}
                   ref={inputRef}
                   type="text"
                   value={typeInput}

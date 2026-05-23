@@ -216,6 +216,7 @@ export default function SetEdit() {
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">{t('form.title')}</label>
               <input
+                  spellCheck={false}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className={inputCls}
@@ -224,6 +225,7 @@ export default function SetEdit() {
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">{t('form.description')}</label>
               <input
+                  spellCheck={false}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className={inputCls}
@@ -302,6 +304,7 @@ export default function SetEdit() {
               <div className="mb-2 flex items-center gap-2">
                 <span className="text-sm text-gray-500">{t('form.separator')}:</span>
                 <input
+                    spellCheck={false}
                   type="text"
                   value={separator}
                   onChange={(e) => setSeparator(e.target.value)}
@@ -309,6 +312,7 @@ export default function SetEdit() {
                 />
               </div>
               <textarea
+                  spellCheck={false}
                 value={importText}
                 onChange={(e) => setImportText(e.target.value)}
                 rows={6}
@@ -357,12 +361,14 @@ export default function SetEdit() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <input
+                        spellCheck={false}
                       value={editTerm}
                       onChange={(e) => setEditTerm(e.target.value)}
                       placeholder={t('form.word')}
                       className="flex-1 rounded-xl border border-gray-200 px-2 py-1 text-sm outline-none focus:border-violet-400"
                     />
                     <input
+                        spellCheck={false}
                       value={editDef}
                       onChange={(e) => setEditDef(e.target.value)}
                       placeholder={t('form.translation')}
@@ -382,6 +388,7 @@ export default function SetEdit() {
                     </button>
                   </div>
                   <input
+                      spellCheck={false}
                     value={editExample}
                     onChange={(e) => setEditExample(e.target.value)}
                     placeholder={t('form.examplePlaceholder')}
@@ -453,6 +460,7 @@ export default function SetEdit() {
             <p className="mb-2 text-sm font-medium text-gray-700">{t('form.addWord')}</p>
             <div className="flex gap-2">
               <input
+                  spellCheck={false}
                 value={newTerm}
                 onChange={(e) => setNewTerm(e.target.value)}
                 placeholder={t('form.word')}
@@ -460,6 +468,7 @@ export default function SetEdit() {
                 onKeyDown={(e) => e.key === 'Enter' && handleAddWord()}
               />
               <input
+                  spellCheck={false}
                 value={newDef}
                 onChange={(e) => setNewDef(e.target.value)}
                 placeholder={t('form.translation')}
@@ -474,6 +483,7 @@ export default function SetEdit() {
               </button>
             </div>
             <input
+                spellCheck={false}
               value={newExample}
               onChange={(e) => setNewExample(e.target.value)}
               placeholder={t('form.examplePlaceholder')}

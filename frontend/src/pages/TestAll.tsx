@@ -170,6 +170,7 @@ export default function TestAll() {
             {sets.map((s) => (
               <label key={s.setId} className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-gray-50">
                 <input
+                    spellCheck={false}
                   type="checkbox"
                   checked={selectedSetIds.has(s.setId)}
                   onChange={() => toggleSet(s.setId)}
@@ -210,6 +211,7 @@ export default function TestAll() {
                 )}
               </div>
               <input
+                  spellCheck={false}
                 type="number"
                 min={2}
                 max={maxWords || 500}
