@@ -72,8 +72,7 @@ export default function SetNew() {
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">{t('form.title')}</label>
             <input
-                spellCheck={false}
-              type="text"
+                              type="text"
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -85,8 +84,7 @@ export default function SetNew() {
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">{t('form.description')}</label>
             <input
-                spellCheck={false}
-              type="text"
+                              type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className={inputCls}
@@ -137,8 +135,7 @@ export default function SetNew() {
             <div className="mb-2 flex items-center gap-2">
               <span className="text-sm text-gray-500">{t('form.separator')}:</span>
               <input
-                  spellCheck={false}
-                type="text"
+                                  type="text"
                 value={separator}
                 onChange={(e) => setSeparator(e.target.value)}
                 className="w-20 rounded-xl border border-gray-200 px-2 py-1 text-center font-mono text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
@@ -148,8 +145,7 @@ export default function SetNew() {
               </span>
             </div>
             <textarea
-                spellCheck={false}
-              value={importText}
+                              value={importText}
               onChange={(e) => setImportText(e.target.value)}
               rows={8}
               className="w-full rounded-xl border border-gray-200 px-3 py-2 font-mono text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
