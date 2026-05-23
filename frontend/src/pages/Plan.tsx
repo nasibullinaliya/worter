@@ -120,7 +120,7 @@ function DetailPanel({ day, onClose }: { day: PlanDayDto; onClose: () => void })
                 {!past && (
                   <div className="flex gap-2 mt-1">
                     <Link
-                      to={`/sets/${s.setId}/test`}
+                      to={`/sets/${s.setId}/study`}
                       className={`flex-1 rounded-xl py-2 text-center text-xs font-semibold transition-colors ${
                         s.isOverdue
                           ? 'border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100'
@@ -131,7 +131,7 @@ function DetailPanel({ day, onClose }: { day: PlanDayDto; onClose: () => void })
                       {t('plan.startStudy')}
                     </Link>
                     <Link
-                      to={`/sets/${s.setId}/quiz`}
+                      to={`/sets/${s.setId}/test`}
                       className={`flex-1 rounded-xl py-2 text-center text-xs font-semibold text-white transition-colors ${
                         s.isOverdue ? 'bg-amber-500 hover:bg-amber-600' : 'bg-violet-600 hover:bg-violet-700'
                       }`}

@@ -59,7 +59,7 @@ export default function Today() {
                   </p>
                 </div>
                 <Link
-                  to={`/sets/${r.setId}/test`}
+                  to={`/sets/${r.setId}/study`}
                   className="shrink-0 rounded-full bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity transition-colors"
                 >
                   {t('test.startBtn')}

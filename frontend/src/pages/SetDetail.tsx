@@ -176,13 +176,13 @@ export default function SetDetail() {
             {t('set.flashcards')}
           </Link>
           <Link
-            to={`/sets/${set.id}/test`}
+            to={`/sets/${set.id}/study`}
             className="rounded-full border-2 border-[#6366F1] px-5 py-2 text-sm font-semibold text-[#4F46E5] hover:bg-indigo-50 transition-colors"
           >
             {t('set.study')}
           </Link>
           <Link
-            to={`/sets/${set.id}/quiz`}
+            to={`/sets/${set.id}/test`}
             className="rounded-full border-2 border-[#6366F1] px-5 py-2 text-sm font-semibold text-[#4F46E5] hover:bg-indigo-50 transition-colors"
           >
             {t('quiz.quizBtn')}

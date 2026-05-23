@@ -41,13 +41,13 @@ export function ReviewBanner({ reminders }: Props) {
             </p>
             <div className="flex gap-2">
               <Link
-                to={`/sets/${r.setId}/test`}
+                to={`/sets/${r.setId}/study`}
                 className="flex-1 rounded-full border border-violet-200 bg-violet-50 py-1.5 text-center text-xs font-semibold text-violet-700 hover:bg-violet-100 transition-colors"
               >
                 {t('plan.startStudy')}
               </Link>
               <Link
-                to={`/sets/${r.setId}/quiz`}
+                to={`/sets/${r.setId}/test`}
                 className="flex-1 rounded-full bg-violet-600 py-1.5 text-center text-xs font-semibold text-white hover:bg-violet-700 transition-colors"
               >
                 {t('plan.startTest')}

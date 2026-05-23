@@ -317,13 +317,13 @@ export default function Dashboard() {
         <h2 className="text-2xl font-bold text-gray-900">{t('dashboard.title')}</h2>
         <div className="flex gap-2">
           <Link
-            to="/test"
+            to="/study"
             className="rounded-full border-2 border-[#6366F1] px-4 py-2 text-sm font-semibold text-[#4F46E5] hover:bg-indigo-50 transition-colors"
           >
             {t('dashboard.studyAll')}
           </Link>
           <Link
-            to="/quiz"
+            to="/test"
             className="rounded-full border-2 border-[#6366F1] px-4 py-2 text-sm font-semibold text-[#4F46E5] hover:bg-indigo-50 transition-colors"
           >
             {t('quiz.quizBtn')}
