@@ -104,7 +104,13 @@ function DetailPanel({ day, onClose }: { day: PlanDayDto; onClose: () => void })
             day.sets.map((s) => (
               <div key={s.setId} className={`rounded-2xl border p-4 ${s.isOverdue ? 'border-amber-200 bg-amber-50' : 'border-gray-100 bg-gray-50'}`}>
                 <div className="flex items-start justify-between gap-2 mb-1">
-                  <p className="font-semibold text-gray-800 text-sm leading-snug">{s.title}</p>
+                  <Link
+                    to={`/sets/${s.setId}`}
+                    onClick={onClose}
+                    className="font-semibold text-gray-800 text-sm leading-snug hover:text-violet-700 transition-colors"
+                  >
+                    {s.title}
+                  </Link>
                   {s.isOverdue && (
                     <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700 uppercase tracking-wide">
                       {t('plan.overdue')}
