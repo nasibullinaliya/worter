@@ -143,6 +143,7 @@ const T = {
     'explore.added': '✓ Добавлен',
 
     // test
+    'study.settingsTitle': 'Настройки изучения',
     'test.settingsTitle': 'Настройки теста',
     'test.direction': 'Направление',
     'test.wordToDef': 'Слово → Перевод',
@@ -369,6 +370,7 @@ const T = {
     'explore.add': '+ Add',
     'explore.added': '✓ Added',
 
+    'study.settingsTitle': 'Study Settings',
     'test.settingsTitle': 'Test Settings',
     'test.direction': 'Direction',
     'test.wordToDef': 'Word → Translation',
@@ -595,6 +597,7 @@ const T = {
     'explore.add': '+ Hinzufügen',
     'explore.added': '✓ Hinzugefügt',
 
+    'study.settingsTitle': 'Lerneinstellungen',
     'test.settingsTitle': 'Testeinstellungen',
     'test.direction': 'Richtung',
     'test.wordToDef': 'Wort → Übersetzung',

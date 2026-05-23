@@ -325,7 +325,7 @@ export function TestRunner({
         </div>
 
         <h2 className="mb-6 text-2xl font-bold text-gray-900">
-          {t('test.settingsTitle')}
+          {t('study.settingsTitle')}
         </h2>
 
         <div className="mb-6 rounded-xl border bg-white p-5 shadow-sm">
