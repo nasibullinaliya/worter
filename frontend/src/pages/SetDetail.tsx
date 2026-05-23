@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { getSet, deleteSet, cloneSet, uncloneSet, type SetDetailDto } from '../api/sets'
+import { getSet, deleteSet, cloneSet, uncloneSet, generateText, type SetDetailDto } from '../api/sets'
 import { getStudyHistory, getAllWords, type SetStudyLogDto, type AllWordsItemDto } from '../api/progress'
 import { Layout } from '../components/Layout'
 import { SpeakButton } from '../components/SpeakButton'
@@ -19,6 +19,11 @@ export default function SetDetail() {
   const [historyOpen, setHistoryOpen] = useState(false)
   const [historyLoading, setHistoryLoading] = useState(false)
   const [allUserWords, setAllUserWords] = useState<AllWordsItemDto[]>([])
+  const [genOpen, setGenOpen] = useState(false)
+  const [genLevel, setGenLevel] = useState('A2')
+  const [genCount, setGenCount] = useState(6)
+  const [genLoading, setGenLoading] = useState(false)
+  const [genText, setGenText] = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -189,6 +194,117 @@ export default function SetDetail() {
           >
             {t('quiz.quizBtn')}
           </Link>
+          <button
+            onClick={() => { setGenText(null); setGenOpen(true) }}
+            className="rounded-full border-2 border-violet-300 px-5 py-2 text-sm font-semibold text-violet-600 hover:bg-violet-50 transition-colors"
+          >
+            ✨ {t('set.generateText')}
+          </button>
+        </div>
+      )}
+
+      {/* Generate text modal */}
+      {genOpen && set && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setGenOpen(false)}>
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900">✨ {t('set.generateText')}</h3>
+              <button onClick={() => setGenOpen(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+            </div>
+
+            {!genText ? (
+              <>
+                <div className="mb-4 flex gap-4">
+                  <div className="flex-1">
+                    <p className="mb-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">{t('set.genLevel')}</p>
+                    <div className="flex gap-2">
+                      {['A1', 'A2', 'B1', 'B2'].map((l) => (
+                        <button
+                          key={l}
+                          onClick={() => setGenLevel(l)}
+                          className={`flex-1 rounded-xl py-2 text-sm font-semibold transition-colors ${
+                            genLevel === l
+                              ? 'bg-violet-600 text-white'
+                              : 'border border-gray-200 text-gray-600 hover:border-violet-300'
+                          }`}
+                        >
+                          {l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="mb-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">{t('set.genSentences')}</p>
+                    <div className="flex gap-2">
+                      {[4, 6, 8, 10].map((n) => (
+                        <button
+                          key={n}
+                          onClick={() => setGenCount(n)}
+                          className={`w-10 rounded-xl py-2 text-sm font-semibold transition-colors ${
+                            genCount === n
+                              ? 'bg-violet-600 text-white'
+                              : 'border border-gray-200 text-gray-600 hover:border-violet-300'
+                          }`}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    setGenLoading(true)
+                    try {
+                      const text = await generateText(set.id, genLevel, genCount)
+                      setGenText(text)
+                    } finally {
+                      setGenLoading(false)
+                    }
+                  }}
+                  disabled={genLoading}
+                  className="w-full rounded-xl bg-violet-600 py-3 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-60 transition-colors"
+                >
+                  {genLoading ? t('set.genLoading') : t('set.genGenerate')}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="mb-4 max-h-72 overflow-y-auto rounded-xl border border-gray-100 bg-gray-50 p-4 text-sm leading-relaxed text-gray-800"
+                  dangerouslySetInnerHTML={{
+                    __html: genText
+                      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                      .replace(/\*\*(.+?)\*\*/g, '<strong class="text-violet-700">$1</strong>')
+                      .replace(/\n/g, '<br/>')
+                  }}
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setGenText(null)}
+                    className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-semibold text-gray-600 hover:border-violet-300 transition-colors"
+                  >
+                    ← {t('set.genBack')}
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setGenText(null)
+                      setGenLoading(true)
+                      try {
+                        const text = await generateText(set.id, genLevel, genCount)
+                        setGenText(text)
+                      } finally {
+                        setGenLoading(false)
+                      }
+                    }}
+                    disabled={genLoading}
+                    className="flex-1 rounded-xl bg-violet-600 py-2.5 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-60 transition-colors"
+                  >
+                    {genLoading ? t('set.genLoading') : '↻ ' + t('set.genRegenerate')}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
 

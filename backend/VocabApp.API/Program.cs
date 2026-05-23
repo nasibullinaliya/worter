@@ -40,6 +40,7 @@ builder.Services.AddAuthorization();
 
 // Services
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddHttpClient<GeminiService>();
 
 // Controllers
 builder.Services.AddControllers();
