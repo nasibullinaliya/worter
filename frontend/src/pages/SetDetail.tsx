@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { getSet, deleteSet, cloneSet, uncloneSet, type SetDetailDto } from '../api/sets'
-import { getStudyHistory, type SetStudyLogDto } from '../api/progress'
+import { getStudyHistory, getAllWords, type SetStudyLogDto, type AllWordsItemDto } from '../api/progress'
 import { Layout } from '../components/Layout'
 import { SpeakButton } from '../components/SpeakButton'
 import { useLang } from '../context/LangContext'
@@ -18,6 +18,7 @@ export default function SetDetail() {
   const [history, setHistory] = useState<SetStudyLogDto[] | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [historyLoading, setHistoryLoading] = useState(false)
+  const [allUserWords, setAllUserWords] = useState<AllWordsItemDto[]>([])
 
   useEffect(() => {
     if (!id) return
@@ -28,6 +29,7 @@ export default function SetDetail() {
       })
       .catch(() => setError(t('set.notFound')))
       .finally(() => setLoading(false))
+    getAllWords().then(setAllUserWords).catch(() => {})
   }, [id])
 
   const handleDelete = async () => {
@@ -191,7 +193,65 @@ export default function SetDetail() {
       )}
 
       {/* Word list */}
-      {set.words.length === 0 ? (
+      {(() => {
+        // terms appearing >1 time within this set
+        const termCount = new Map<string, number>()
+        for (const w of set.words) {
+          const key = w.term.toLowerCase().trim()
+          termCount.set(key, (termCount.get(key) ?? 0) + 1)
+        }
+        const intraDups = new Set([...termCount.entries()].filter(([, c]) => c > 1).map(([k]) => k))
+
+        // terms present in other sets
+        const crossMap = new Map<string, string[]>()
+        for (const w of allUserWords) {
+          if (w.setId === set.id) continue
+          const key = w.term.toLowerCase().trim()
+          if (!crossMap.has(key)) crossMap.set(key, [])
+          if (!crossMap.get(key)!.includes(w.setTitle)) crossMap.get(key)!.push(w.setTitle)
+        }
+
+        return set.words.length === 0 ? null : (
+          <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+            {set.words.map((word, i) => {
+              const key = word.term.toLowerCase().trim()
+              const isDup = intraDups.has(key)
+              const otherSets = crossMap.get(key) ?? []
+              return (
+                <div
+                  key={word.id}
+                  className={`flex items-center gap-4 px-5 py-3 ${
+                    i !== set.words.length - 1 ? 'border-b border-gray-50' : ''
+                  }`}
+                >
+                  <span className="w-6 shrink-0 text-sm text-gray-300">{i + 1}</span>
+                  <div className="flex w-1/2 min-w-0 flex-col">
+                    <span className="flex items-center gap-1.5 font-medium text-gray-900">
+                      {word.term}
+                      <SpeakButton text={word.term} lang={set.language} />
+                      {isDup && (
+                        <span title={t('set.dupInSet')} className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
+                          ×2
+                        </span>
+                      )}
+                      {otherSets.length > 0 && (
+                        <span title={otherSets.join(', ')} className="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-600 cursor-default">
+                          {otherSets.length === 1 ? otherSets[0] : `${otherSets.length} sets`}
+                        </span>
+                      )}
+                    </span>
+                    {word.example && (
+                      <span className="mt-0.5 text-xs italic text-gray-400">{word.example}</span>
+                    )}
+                  </div>
+                  <span className="w-1/2 text-sm text-gray-500">{word.definition}</span>
+                </div>
+              )
+            })}
+          </div>
+        )
+      })()}
+      {set.words.length === 0 && (
         <div className="rounded-2xl border border-dashed border-gray-200 bg-white py-12 text-center">
           <p className="text-gray-400">{t('set.noWords')}</p>
           {set.isOwner && (
@@ -202,29 +262,6 @@ export default function SetDetail() {
               {t('set.addWords')}
             </Link>
           )}
-        </div>
-      ) : (
-        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-          {set.words.map((word, i) => (
-            <div
-              key={word.id}
-              className={`flex items-center gap-4 px-5 py-3 ${
-                i !== set.words.length - 1 ? 'border-b border-gray-50' : ''
-              }`}
-            >
-              <span className="w-6 shrink-0 text-sm text-gray-300">{i + 1}</span>
-              <div className="flex w-1/2 min-w-0 flex-col">
-                <span className="flex items-center gap-1 font-medium text-gray-900">
-                  {word.term}
-                  <SpeakButton text={word.term} lang={set.language} />
-                </span>
-                {word.example && (
-                  <span className="mt-0.5 text-xs italic text-gray-400">{word.example}</span>
-                )}
-              </div>
-              <span className="w-1/2 text-sm text-gray-500">{word.definition}</span>
-            </div>
-          ))}
         </div>
       )}
       {/* Study history */}
