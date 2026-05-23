@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 
@@ -6,7 +5,8 @@ namespace VocabApp.API.Services;
 
 public class GeminiService(IConfiguration config, HttpClient http, ILogger<GeminiService> logger)
 {
-    private const string Model = "gemini-1.5-flash";
+    private const string Model = "llama-3.3-70b-versatile";
+    private const string BaseUrl = "https://api.groq.com/openai/v1/chat/completions";
 
     public async Task<string> GenerateTextAsync(
         IEnumerable<string> words,
@@ -15,10 +15,10 @@ public class GeminiService(IConfiguration config, HttpClient http, ILogger<Gemin
         int sentenceCount,
         CancellationToken ct = default)
     {
-        var apiKey = config["Gemini:ApiKey"];
-        logger.LogInformation("Gemini API key present: {Present}", !string.IsNullOrWhiteSpace(apiKey));
+        var apiKey = config["Groq:ApiKey"];
+        logger.LogInformation("Groq API key present: {Present}", !string.IsNullOrWhiteSpace(apiKey));
         if (string.IsNullOrWhiteSpace(apiKey))
-            throw new InvalidOperationException("Gemini API key is not configured.");
+            throw new InvalidOperationException("Groq API key is not configured.");
 
         var wordList = string.Join(", ", words);
         var langName = language switch
@@ -40,23 +40,26 @@ public class GeminiService(IConfiguration config, HttpClient http, ILogger<Gemin
 
         var requestBody = JsonSerializer.Serialize(new
         {
-            contents = new[]
+            model = Model,
+            messages = new[]
             {
-                new { parts = new[] { new { text = prompt } } }
-            }
+                new { role = "user", content = prompt }
+            },
+            temperature = 0.7,
+            max_tokens = 1024
         });
 
-        var url = $"https://generativelanguage.googleapis.com/v1beta/models/{Model}:generateContent?key={apiKey}";
-        var request = new HttpRequestMessage(HttpMethod.Post, url)
+        var request = new HttpRequestMessage(HttpMethod.Post, BaseUrl)
         {
             Content = new StringContent(requestBody, Encoding.UTF8, "application/json")
         };
+        request.Headers.Add("Authorization", $"Bearer {apiKey}");
 
         var response = await http.SendAsync(request, ct);
         if (!response.IsSuccessStatusCode)
         {
             var errorBody = await response.Content.ReadAsStringAsync(ct);
-            logger.LogError("Gemini API returned {Status}: {Body}", (int)response.StatusCode, errorBody);
+            logger.LogError("Groq API returned {Status}: {Body}", (int)response.StatusCode, errorBody);
             response.EnsureSuccessStatusCode();
         }
 
@@ -64,10 +67,9 @@ public class GeminiService(IConfiguration config, HttpClient http, ILogger<Gemin
         using var doc = JsonDocument.Parse(json);
 
         return doc.RootElement
-            .GetProperty("candidates")[0]
+            .GetProperty("choices")[0]
+            .GetProperty("message")
             .GetProperty("content")
-            .GetProperty("parts")[0]
-            .GetProperty("text")
             .GetString() ?? string.Empty;
     }
 }
