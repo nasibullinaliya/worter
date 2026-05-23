@@ -6,7 +6,7 @@ namespace VocabApp.API.Services;
 
 public class GeminiService(IConfiguration config, HttpClient http, ILogger<GeminiService> logger)
 {
-    private const string Model = "gemini-2.0-flash";
+    private const string Model = "gemini-1.5-flash";
 
     public async Task<string> GenerateTextAsync(
         IEnumerable<string> words,
