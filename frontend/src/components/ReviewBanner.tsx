@@ -36,9 +36,12 @@ export function ReviewBanner({ reminders }: Props) {
             key={r.setId}
             className="rounded-xl border border-indigo-100 bg-white px-4 py-3 shadow-sm"
           >
-            <p className="mb-2.5 truncate text-sm font-semibold text-gray-800">
+            <Link
+              to={`/sets/${r.setId}`}
+              className="mb-2.5 block truncate text-sm font-semibold text-gray-800 hover:text-violet-700 transition-colors"
+            >
               {r.title}
-            </p>
+            </Link>
             <div className="flex gap-2">
               <Link
                 to={`/sets/${r.setId}/study`}
