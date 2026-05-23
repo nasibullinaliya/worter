@@ -230,13 +230,24 @@ export default function SetDetail() {
                       {word.term}
                       <SpeakButton text={word.term} lang={set.language} />
                       {isDup && (
-                        <span title={t('set.dupInSet')} className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
-                          ×2
+                        <span className="group relative cursor-default">
+                          <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
+                            ×2
+                          </span>
+                          <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 hidden -translate-x-1/2 whitespace-nowrap rounded-xl border border-gray-100 bg-white px-3 py-2 text-xs text-gray-500 shadow-md group-hover:block">
+                            {t('set.dupInSet')}
+                          </span>
                         </span>
                       )}
                       {otherSets.length > 0 && (
-                        <span title={otherSets.join(', ')} className="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-600 cursor-default">
-                          {otherSets.length === 1 ? otherSets[0] : `${otherSets.length} sets`}
+                        <span className="group relative cursor-default">
+                          <span className="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-600">
+                            {otherSets.length === 1 ? otherSets[0] : `${otherSets.length} sets`}
+                          </span>
+                          <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 hidden -translate-x-1/2 whitespace-nowrap rounded-xl border border-gray-100 bg-white px-3 py-2 text-xs text-gray-500 shadow-md group-hover:block">
+                            <span className="block font-semibold text-gray-700 mb-1">{t('set.inOtherSets')}:</span>
+                            {otherSets.map((s) => <span key={s} className="block">{s}</span>)}
+                          </span>
                         </span>
                       )}
                     </span>
