@@ -4,7 +4,7 @@ using System.Text.Json;
 
 namespace VocabApp.API.Services;
 
-public class GeminiService(IConfiguration config, HttpClient http)
+public class GeminiService(IConfiguration config, HttpClient http, ILogger<GeminiService> logger)
 {
     private const string Model = "gemini-2.0-flash";
 
@@ -16,6 +16,7 @@ public class GeminiService(IConfiguration config, HttpClient http)
         CancellationToken ct = default)
     {
         var apiKey = config["Gemini:ApiKey"];
+        logger.LogInformation("Gemini API key present: {Present}", !string.IsNullOrWhiteSpace(apiKey));
         if (string.IsNullOrWhiteSpace(apiKey))
             throw new InvalidOperationException("Gemini API key is not configured.");
 
@@ -52,7 +53,12 @@ public class GeminiService(IConfiguration config, HttpClient http)
         };
 
         var response = await http.SendAsync(request, ct);
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync(ct);
+            logger.LogError("Gemini API returned {Status}: {Body}", (int)response.StatusCode, errorBody);
+            response.EnsureSuccessStatusCode();
+        }
 
         var json = await response.Content.ReadAsStringAsync(ct);
         using var doc = JsonDocument.Parse(json);

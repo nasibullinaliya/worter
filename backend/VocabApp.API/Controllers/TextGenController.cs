@@ -47,7 +47,22 @@ public class TextGenController(AppDbContext db, GeminiService gemini) : Controll
 
         var words = set.Words.Select(w => w.Term).ToList();
 
-        var text = await gemini.GenerateTextAsync(words, set.Language ?? "de-DE", level, sentences, ct);
-        return Ok(new GenerateTextResponse(text));
+        try
+        {
+            var text = await gemini.GenerateTextAsync(words, set.Language ?? "de-DE", level, sentences, ct);
+            return Ok(new GenerateTextResponse(text));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return StatusCode(503, new { message = ex.Message });
+        }
+        catch (HttpRequestException ex)
+        {
+            return StatusCode(502, new { message = $"Gemini API error: {ex.Message}" });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
     }
 }
