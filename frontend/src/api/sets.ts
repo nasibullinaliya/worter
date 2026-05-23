@@ -79,11 +79,7 @@ export const swapAllWords = (setId: string) =>
 export const getReminders = () =>
   client.get<ReminderDto[]>('/api/reminders').then((r) => r.data)
 
-export const generateText = (
-  setId: string,
-  level: string,
-  sentenceCount: number
-) =>
+export const generateText = (setId: string, level: string) =>
   client
-    .post<{ text: string }>(`/api/sets/${setId}/generate-text`, { level, sentenceCount })
+    .post<{ text: string }>(`/api/sets/${setId}/generate-text`, { level })
     .then((r) => r.data.text)

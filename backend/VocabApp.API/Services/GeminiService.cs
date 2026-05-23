@@ -12,7 +12,6 @@ public class GeminiService(IConfiguration config, HttpClient http, ILogger<Gemin
         IEnumerable<string> words,
         string language,
         string level,
-        int sentenceCount,
         CancellationToken ct = default)
     {
         var apiKey = config["Groq:ApiKey"];
@@ -31,12 +30,18 @@ public class GeminiService(IConfiguration config, HttpClient http, ILogger<Gemin
         };
 
         var prompt = $"""
-            Write a natural {level}-level {langName} text ({sentenceCount} sentences).
-            Use as many of these words as possible (at least half of them): {wordList}.
-            Wrap each used word in **bold** (markdown).
-            Write the way a native speaker would naturally speak or write — use connectors, transitions, and a conversational flow.
-            Vocabulary and grammar should match {level} level, but the text should feel authentic, not like a textbook exercise.
-            Return only the text, no explanations or comments.
+            Write a natural, fluent {langName} text at {level} level.
+
+            Requirements:
+            - Use as many of these words as naturally possible (aim for at least half): {wordList}
+            - Mark each used word from the list in **bold** (markdown)
+            - All other vocabulary and expressions must also be appropriate for {level} level
+            - Use grammatical structures typical for {level} level (e.g. for A1: present tense, simple sentences; for B2: passive, conditionals, complex clauses)
+            - Every sentence must be grammatically correct
+            - Write the way a native speaker would — use natural connectors, transitions, and varied sentence rhythm
+            - The text should feel like real communication, not a language exercise
+
+            Return only the text itself, no title, no comments, no explanations.
             """;
 
         var requestBody = JsonSerializer.Serialize(new

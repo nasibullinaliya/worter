@@ -8,8 +8,7 @@ using VocabApp.API.Services;
 namespace VocabApp.API.Controllers;
 
 public record GenerateTextRequest(
-    string Level = "A2",
-    int SentenceCount = 6
+    string Level = "A2"
 );
 
 public record GenerateTextResponse(string Text);
@@ -43,13 +42,11 @@ public class TextGenController(AppDbContext db, GeminiService gemini) : Controll
             return BadRequest(new { message = "Set has no words." });
 
         var level = ValidLevels.Contains(req.Level.ToUpper()) ? req.Level.ToUpper() : "A2";
-        var sentences = Math.Clamp(req.SentenceCount, 3, 15);
-
         var words = set.Words.Select(w => w.Term).ToList();
 
         try
         {
-            var text = await gemini.GenerateTextAsync(words, set.Language ?? "de-DE", level, sentences, ct);
+            var text = await gemini.GenerateTextAsync(words, set.Language ?? "de-DE", level, ct);
             return Ok(new GenerateTextResponse(text));
         }
         catch (InvalidOperationException ex)
