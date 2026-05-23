@@ -31,11 +31,12 @@ public class GeminiService(IConfiguration config, HttpClient http, ILogger<Gemin
         };
 
         var prompt = $"""
-            Write a simple {level}-level {langName} text ({sentenceCount} sentences).
+            Write a natural {level}-level {langName} text ({sentenceCount} sentences).
             Use as many of these words as possible (at least half of them): {wordList}.
             Wrap each used word in **bold** (markdown).
-            Use only simple vocabulary and short sentences appropriate for {level} level.
-            Return only the text, no explanations.
+            Write the way a native speaker would naturally speak or write — use connectors, transitions, and a conversational flow.
+            Vocabulary and grammar should match {level} level, but the text should feel authentic, not like a textbook exercise.
+            Return only the text, no explanations or comments.
             """;
 
         var requestBody = JsonSerializer.Serialize(new

@@ -274,7 +274,7 @@ export default function SetDetail() {
                   dangerouslySetInnerHTML={{
                     __html: genText
                       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-                      .replace(/\*\*(.+?)\*\*/g, '<strong class="text-violet-700">$1</strong>')
+                      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
                       .replace(/\n/g, '<br/>')
                   }}
                 />
