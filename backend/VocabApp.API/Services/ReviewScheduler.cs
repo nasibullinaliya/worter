@@ -4,14 +4,20 @@ namespace VocabApp.API.Services;
 
 public static class ReviewScheduler
 {
-    // Absolute days from FirstStudiedAt when the next review is due:
-    // Stage 1 done → next at day +1
-    // Stage 2 done → next at day +2
-    // Stage 3 done → next at day +4
-    // Stage 4 done → next at day +7
-    // Stage 5 done → next at day +14
+    // Days to add to the CURRENT study date to get the next review date.
+    // Intervals are relative to when the user actually studied (LastStudiedAt),
+    // so a missed day simply shifts the whole schedule forward without skipping stages.
+    //
+    // Stage 1 done → review in +1 day
+    // Stage 2 done → review in +1 day
+    // Stage 3 done → review in +2 days
+    // Stage 4 done → review in +3 days
+    // Stage 5 done → review in +7 days
     // Stage 6 = complete (NextReviewAt = null)
-    private static readonly int[] Intervals = [1, 2, 4, 7, 14];
+    //
+    // Without missed days from May 23: 23 → 24 → 25 → 27 → 30 → Jun 6
+    // With stage-2 missed (studied May 25): 23 → 25 → 26 → 28 → 31 → Jun 7
+    public static readonly int[] Intervals = [1, 1, 2, 3, 7];
 
     // If a review is overdue by more than this many days → reset the cycle.
     public const int GracePeriodDays = 3;
@@ -46,9 +52,11 @@ public static class ReviewScheduler
         {
             progress.ReviewStage = Math.Min(progress.ReviewStage + 1, Intervals.Length + 1);
 
-            // Stage 6 = complete
+            // Next review is relative to today (the actual study date), not FirstStudiedAt.
+            // This ensures a missed day shifts the schedule forward rather than causing
+            // NextReviewAt to land on today again.
             progress.NextReviewAt = progress.ReviewStage <= Intervals.Length
-                ? progress.FirstStudiedAt.Date.AddDays(Intervals[progress.ReviewStage - 1])
+                ? now.Date.AddDays(Intervals[progress.ReviewStage - 1])
                 : null;
         }
     }

@@ -42,7 +42,8 @@ public class RemindersController(AppDbContext db) : ControllerBase
         var due = await db.SetProgress
             .Where(p => p.UserId == userId
                      && p.NextReviewAt != null
-                     && p.NextReviewAt.Value.Date <= today)
+                     && p.NextReviewAt.Value.Date <= today
+                     && p.LastStudiedAt.Date < today)
             .Include(p => p.Set)
             .OrderBy(p => p.NextReviewAt)
             .Select(p => new ReminderDto(

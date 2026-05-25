@@ -68,27 +68,23 @@ public class ReviewSchedulerTests
     [Fact]
     public void RecordReview_Advances_Through_All_Stages()
     {
-        // Stage 1 → due → stage 2
         var p = MakeProgress(stage: 1, daysAgo: 1);
+
         ReviewScheduler.RecordReview(p, 10, 10);
         p.ReviewStage.Should().Be(2);
 
-        // Simulate stage 2 due
         p.NextReviewAt = DateTime.UtcNow.Date.AddDays(-1);
         ReviewScheduler.RecordReview(p, 10, 10);
         p.ReviewStage.Should().Be(3);
 
-        // Simulate stage 3 due
         p.NextReviewAt = DateTime.UtcNow.Date.AddDays(-1);
         ReviewScheduler.RecordReview(p, 10, 10);
         p.ReviewStage.Should().Be(4);
 
-        // Simulate stage 4 due
         p.NextReviewAt = DateTime.UtcNow.Date.AddDays(-1);
         ReviewScheduler.RecordReview(p, 10, 10);
         p.ReviewStage.Should().Be(5);
 
-        // Simulate stage 5 due → stage 6 = complete
         p.NextReviewAt = DateTime.UtcNow.Date.AddDays(-1);
         ReviewScheduler.RecordReview(p, 10, 10);
         p.ReviewStage.Should().Be(6);
@@ -99,7 +95,7 @@ public class ReviewSchedulerTests
     public void RecordReview_Stage6_NextReviewAt_Stays_Null()
     {
         var p = MakeProgress(stage: 6, daysAgo: 0);
-        p.NextReviewAt = null; // stage 6 has no next review
+        p.NextReviewAt = null;
 
         ReviewScheduler.RecordReview(p, 10, 10);
 
@@ -118,21 +114,133 @@ public class ReviewSchedulerTests
         p.TotalWords.Should().Be(12);
     }
 
-    // ── NextReviewAt intervals ─────────────────────────────────────────────────
+    // ── NextReviewAt intervals (relative to study date) ───────────────────────
+    //
+    // Intervals are relative to when the user ACTUALLY studied (today),
+    // not absolute from FirstStudiedAt. This means a missed day simply shifts
+    // the schedule forward without skipping stages.
+    //
+    // Intervals array: [1, 1, 2, 3, 7]
+    //   stage 1 done → +1 day
+    //   stage 2 done → +1 day
+    //   stage 3 done → +2 days
+    //   stage 4 done → +3 days
+    //   stage 5 done → +7 days
 
     [Theory]
-    [InlineData(1, 2)]   // stage 2 → FirstStudiedAt + 2 days
-    [InlineData(2, 4)]   // stage 3 → FirstStudiedAt + 4 days
-    [InlineData(3, 7)]   // stage 4 → FirstStudiedAt + 7 days
-    [InlineData(4, 14)]  // stage 5 → FirstStudiedAt + 14 days
-    public void RecordReview_Sets_Correct_Interval(int currentStage, int expectedDaysFromFirst)
+    [InlineData(1, 1)]   // stage 1→2: today + Intervals[1] = today + 1
+    [InlineData(2, 2)]   // stage 2→3: today + Intervals[2] = today + 2
+    [InlineData(3, 3)]   // stage 3→4: today + Intervals[3] = today + 3
+    [InlineData(4, 7)]   // stage 4→5: today + Intervals[4] = today + 7
+    public void RecordReview_Sets_Correct_Relative_Interval(int currentStage, int expectedDaysFromToday)
     {
         var p = MakeProgress(stage: currentStage, daysAgo: 1);
+        var today = DateTime.UtcNow.Date;
 
         ReviewScheduler.RecordReview(p, 10, 10);
 
-        var expectedDate = p.FirstStudiedAt.Date.AddDays(expectedDaysFromFirst);
-        p.NextReviewAt!.Value.Date.Should().Be(expectedDate);
+        p.NextReviewAt!.Value.Date.Should().Be(today.AddDays(expectedDaysFromToday));
+    }
+
+    [Fact]
+    public void RecordReview_StudiedToday_NextReviewAt_IsStrictlyInFuture_NotToday()
+    {
+        // Regression test: user studied a set exactly on its due date (today).
+        // After recording the review, the set must NOT re-appear in reminders immediately —
+        // NextReviewAt must be strictly after today, never on today itself.
+        //
+        // Bug that was fixed: with absolute intervals (from FirstStudiedAt), studying late
+        // could produce NextReviewAt = today, causing the set to appear in reminders again
+        // on the same day. Relative intervals (from actual study date) guarantee at least
+        // +1 day for every stage transition.
+        var today = DateTime.UtcNow.Date;
+        var p = MakeProgress(stage: 1, daysAgo: 1); // NextReviewAt = today → due
+
+        ReviewScheduler.RecordReview(p, knownCount: 10, totalWords: 10);
+
+        p.NextReviewAt.Should().NotBeNull();
+        p.NextReviewAt!.Value.Date.Should().BeAfter(today,
+            "after studying today the next review must be at least tomorrow, never today");
+    }
+
+    [Fact]
+    public void RecordReview_NextReviewAt_Is_Always_In_The_Future()
+    {
+        // For any stage reviewed today, NextReviewAt must be strictly after today
+        for (int stage = 1; stage <= 4; stage++)
+        {
+            var p = MakeProgress(stage: stage, daysAgo: 1);
+            ReviewScheduler.RecordReview(p, 10, 10);
+
+            if (p.NextReviewAt.HasValue)
+                p.NextReviewAt.Value.Date.Should().BeAfter(DateTime.UtcNow.Date,
+                    $"stage {stage}→{stage + 1}: NextReviewAt must be in the future");
+        }
+    }
+
+    // ── Missed-day shift behaviour ─────────────────────────────────────────────
+
+    [Fact]
+    public void RecordReview_LateStudy_ShiftsSchedule_WithoutSkippingStages()
+    {
+        // User first studied May 23 (stage 1, due May 24).
+        // Missed May 24, studied May 25 (1 day late).
+        // Expected: advance to stage 2, NextReviewAt = May 25 + 1 = May 26
+        //           (not May 24 or May 25, which would show as immediately due again)
+        var p = MakeProgress(stage: 1, daysAgo: 2); // NextReviewAt = yesterday (1 day overdue)
+
+        ReviewScheduler.RecordReview(p, 10, 10);
+
+        p.ReviewStage.Should().Be(2);
+        p.NextReviewAt!.Value.Date.Should().Be(DateTime.UtcNow.Date.AddDays(1),
+            "late study shifts the next review to tomorrow, not to a past date");
+    }
+
+    [Fact]
+    public void RecordReview_WithoutMissedDays_FollowsStandardSchedule()
+    {
+        // Simulate perfect schedule: each review happens exactly on the due date.
+        // With relative intervals, NextReviewAt is always computed from the actual
+        // study date (today in tests), so all expected dates are relative to today.
+        //
+        // Intervals: [1, 1, 2, 3, 7]
+        //   stage 1 done → today + 1
+        //   stage 2 done → today + 1
+        //   stage 3 done → today + 2
+        //   stage 4 done → today + 3
+        //   stage 5 done → null (complete)
+        var today = DateTime.UtcNow.Date;
+
+        var p = MakeProgress(stage: 1, daysAgo: 1); // NextReviewAt = today → due
+
+        // Stage 1 → 2
+        ReviewScheduler.RecordReview(p, 10, 10);
+        p.ReviewStage.Should().Be(2);
+        p.NextReviewAt!.Value.Date.Should().Be(today.AddDays(1)); // Intervals[1] = 1
+
+        // Stage 2 → 3: mark as due today and review again
+        p.NextReviewAt = today; // simulate arriving at the due date
+        ReviewScheduler.RecordReview(p, 10, 10);
+        p.ReviewStage.Should().Be(3);
+        p.NextReviewAt!.Value.Date.Should().Be(today.AddDays(2)); // Intervals[2] = 2
+
+        // Stage 3 → 4
+        p.NextReviewAt = today;
+        ReviewScheduler.RecordReview(p, 10, 10);
+        p.ReviewStage.Should().Be(4);
+        p.NextReviewAt!.Value.Date.Should().Be(today.AddDays(3)); // Intervals[3] = 3
+
+        // Stage 4 → 5
+        p.NextReviewAt = today;
+        ReviewScheduler.RecordReview(p, 10, 10);
+        p.ReviewStage.Should().Be(5);
+        p.NextReviewAt!.Value.Date.Should().Be(today.AddDays(7)); // Intervals[4] = 7
+
+        // Stage 5 → 6: complete
+        p.NextReviewAt = today;
+        ReviewScheduler.RecordReview(p, 10, 10);
+        p.ReviewStage.Should().Be(6);
+        p.NextReviewAt.Should().BeNull("stage 6 is the final stage");
     }
 
     // ── IsExpired ──────────────────────────────────────────────────────────────
@@ -157,7 +265,6 @@ public class ReviewSchedulerTests
     public void IsExpired_Returns_True_Beyond_Grace_Period()
     {
         var p = MakeProgress(stage: 1, daysAgo: 0);
-        // Set NextReviewAt far enough in the past to exceed the grace period
         p.NextReviewAt = DateTime.UtcNow.Date.AddDays(-(ReviewScheduler.GracePeriodDays + 1));
 
         ReviewScheduler.IsExpired(p).Should().BeTrue();
@@ -208,14 +315,12 @@ public class ReviewSchedulerTests
     [Fact]
     public void Expired_Progress_Should_Be_Restarted_Not_Advanced()
     {
-        // Overdue by GracePeriodDays + 1 → IsExpired = true
         var p = MakeProgress(stage: 2, daysAgo: 0);
         p.NextReviewAt = DateTime.UtcNow.Date.AddDays(-(ReviewScheduler.GracePeriodDays + 1));
         var oldFirst = p.FirstStudiedAt;
 
         ReviewScheduler.IsExpired(p).Should().BeTrue();
 
-        // Controller logic: IsExpired → Restart
         ReviewScheduler.Restart(p, knownCount: 8, totalWords: 10);
 
         p.ReviewStage.Should().Be(1, "cycle restarts from stage 1 after expiry");
@@ -227,7 +332,6 @@ public class ReviewSchedulerTests
     [Fact]
     public void Non_Expired_Overdue_Progress_Should_Advance_Not_Restart()
     {
-        // Overdue by exactly GracePeriodDays → IsExpired = false, stage should advance
         var p = MakeProgress(stage: 2, daysAgo: 0);
         p.NextReviewAt = DateTime.UtcNow.Date.AddDays(-ReviewScheduler.GracePeriodDays);
 
@@ -241,12 +345,14 @@ public class ReviewSchedulerTests
     // ── Helpers ────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Creates a SetProgress with NextReviewAt set to `daysAgo` days in the past
-    /// (so ReviewAt.Date + daysAgo = today, meaning it was due `daysAgo` days ago).
+    /// Creates a SetProgress with NextReviewAt = today + 1 - daysAgo
+    /// (daysAgo=1 → due today; daysAgo=2 → due yesterday; daysAgo=0 → due tomorrow).
     /// </summary>
     private static SetProgress MakeProgress(int stage, int daysAgo)
     {
-        var firstStudied = DateTime.UtcNow.AddDays(-30);
+        var nextReview = DateTime.UtcNow.Date.AddDays(-daysAgo + 1);
+        var firstStudied = DateTime.UtcNow.AddDays(-30); // FirstStudiedAt is for display only now
+
         return new SetProgress
         {
             Id = Guid.NewGuid(),
@@ -255,7 +361,7 @@ public class ReviewSchedulerTests
             ReviewStage = stage,
             FirstStudiedAt = firstStudied,
             LastStudiedAt = DateTime.UtcNow.AddDays(-daysAgo),
-            NextReviewAt = DateTime.UtcNow.Date.AddDays(-daysAgo + 1),
+            NextReviewAt = nextReview,
             KnownCount = 5,
             TotalWords = 10,
         };
