@@ -177,7 +177,7 @@ function DraggableChip({ set, dateStr, past }: { set: PlanSetItemDto; dateStr: s
   const { t } = useLang()
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `${set.setId}::${dateStr}`,
-    disabled: past,
+    disabled: past || set.isProjected,
   })
 
   const normalStyle = set.isOverdue
@@ -193,6 +193,7 @@ function DraggableChip({ set, dateStr, past }: { set: PlanSetItemDto; dateStr: s
       className={`rounded-lg px-2 py-1 text-[11px] font-medium leading-snug select-none transition-opacity ${
         past ? 'bg-gray-100 text-gray-400'
         : isDragging ? 'opacity-30'
+        : set.isProjected ? normalStyle
         : `cursor-grab active:cursor-grabbing ${normalStyle}`
       }`}
       {...(!past ? listeners : {})}
