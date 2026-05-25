@@ -130,7 +130,9 @@ public class PlanController(AppDbContext db) : ControllerBase
             .Select(i =>
             {
                 var date = from.AddDays(i);
-                var sets = grouped.GetValueOrDefault(date, []);
+                var sets = grouped.GetValueOrDefault(date, [])
+                    .OrderBy(s => s.IsProjected)   // confirmed first, projected last
+                    .ToList();
                 return new PlanDayDto(date.ToDateTime(TimeOnly.MinValue), sets.Sum(s => s.TotalWords), sets);
             })
             .ToList();
