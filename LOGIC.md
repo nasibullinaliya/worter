@@ -99,24 +99,33 @@ For `SetEdit`, terms that already exist in the **current** set are excluded from
 
 ## SRS — Spaced Repetition
 
-### Intervals (absolute days from `FirstStudiedAt`)
+### Intervals (relative to actual study date)
 
-| Stage | When it is set | Review due at | NextReviewAt |
+NextReviewAt is always computed from the **actual study date** (`LastStudiedAt`), not from `FirstStudiedAt`.  
+A missed day simply shifts the whole schedule forward — no stages are skipped.
+
+| Stage | Transition | Interval from study date | NextReviewAt |
 |---|---|---|---|
 | 0 | Reset / never studied | — | null |
-| 1 | After first study session | day 1 | FirstStudiedAt + 1 day |
-| 2 | After day-1 review | day 2 | FirstStudiedAt + 2 days |
-| 3 | After day-2 review | day 4 | FirstStudiedAt + 4 days |
-| 4 | After day-4 review | day 7 | FirstStudiedAt + 7 days |
-| 5 | After day-7 review | day 14 | FirstStudiedAt + 14 days |
-| 6 | After day-14 review — cycle complete | — | null (no longer appears in reminders) |
+| 1 | After first study session | +1 day | LastStudiedAt + 1 day |
+| 2 | After stage-1 review | +1 day | LastStudiedAt + 1 day |
+| 3 | After stage-2 review | +2 days | LastStudiedAt + 2 days |
+| 4 | After stage-3 review | +3 days | LastStudiedAt + 3 days |
+| 5 | After stage-4 review | +7 days | LastStudiedAt + 7 days |
+| 6 | After stage-5 review — cycle complete | — | null |
+
+**Example without missed days** (started May 23):  
+May 23 → 24 → 25 → 27 → 30 → Jun 6
+
+**Example with stage-2 missed** (studied May 25 instead of May 24):  
+May 23 → 25 → 26 → 28 → 31 → Jun 7
 
 ### Stage Advancement Rules
 - **First session** (`SetProgress` does not exist yet) → `StartTracking`: stage=1, NextReviewAt = today+1
 - **Repeat sessions** → `RecordReview`:
   - Stage advances **only if** `NextReviewAt.Date <= today`
   - Multiple sessions on the same day do not double-advance
-  - NextReviewAt is calculated from `FirstStudiedAt`, not from the date of the last session
+  - NextReviewAt is always computed from `now.Date` (the actual study date), so NextReviewAt is guaranteed to be strictly in the future after any review
 
 ### Grace Period and Restart
 - On every call to `POST /api/progress/{setId}`, the overdue status is checked via `ReviewScheduler.IsExpired()`
@@ -124,32 +133,11 @@ For `SetEdit`, terms that already exist in the **current** set are excluded from
 - Within the grace period (missed by ≤ 3 days): stage advances normally via `RecordReview`
 - Stage 0 with null `NextReviewAt` also triggers `Restart` (manual reset path)
 
-### ⚠️ Data migration note (2026-05-21)
-Intervals were extended from **[1, 2, 7, 14]** to **[1, 2, 4, 7, 14]** (day-4 added mid-chain).
-This shifted the meaning of stage numbers for existing records:
+### ⚠️ Data migration note (2026-05-25)
+Intervals changed from **absolute** `[1, 2, 4, 7, 14]` days from `FirstStudiedAt` to **relative** `[1, 1, 2, 3, 7]` days from actual study date.  
+Migration `20260525085542_FixRelativeIntervalNextReviewAt` corrects existing records where `NextReviewAt ≤ LastStudiedAt` (which was impossible under relative intervals) by recomputing `NextReviewAt = LastStudiedAt.Date + Intervals[stage-1]`.
 
-| Old stage | Old interval | New stage | New interval |
-|---|---|---|---|
-| 1 | 1 day | 1 | 1 day (unchanged) |
-| 2 | 2 days | 2 | 2 days (unchanged) |
-| 3 | 7 days | **4** | 7 days |
-| 4 | 14 days | **5** | 14 days |
-| 5 (complete) | null | **6** (complete) | null |
-
-Records at old stages 3–5 must be remapped with a one-time SQL migration:
-```sql
-UPDATE "SetProgress" SET "ReviewStage" = 4
-WHERE "ReviewStage" = 3 AND "NextReviewAt" - "FirstStudiedAt" > INTERVAL '5 days';
-
-UPDATE "SetProgress" SET "ReviewStage" = 5
-WHERE "ReviewStage" = 4 AND "NextReviewAt" - "FirstStudiedAt" > INTERVAL '10 days';
-
-UPDATE "SetProgress" SET "ReviewStage" = 6
-WHERE "ReviewStage" = 5 AND "NextReviewAt" IS NULL;
-```
-`NextReviewAt` values do **not** need updating — the interval in days is the same in both chains.
-
-### Dashboard Display (stage pips 1/2/4/7/14)
+### Dashboard Display (stage pips +1/+1/+2/+3/+7)
 - Grey = future stage
 - Bold dark = current (due now)
 - Bold violet = completed stages
