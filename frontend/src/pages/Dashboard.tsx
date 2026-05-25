@@ -245,7 +245,8 @@ function PlanWidget() {
               label = DAY_LETTERS[new Date(d.date.slice(0, 10) + 'T12:00:00Z').getDay()]
             } else {
               const dayNum = new Date(d.date.slice(0, 10) + 'T12:00:00Z').getDate()
-              label = (i === 0 || i % 5 === 4 || isToday) ? String(dayNum) : ''
+              // Show label at i=0 (today), then every 5 days, and the last day
+              label = (i === 0 || i % 5 === 0 || i === 29) ? String(dayNum) : ''
             }
 
             return (

@@ -29,7 +29,7 @@ public class PlanController(AppDbContext db) : ControllerBase
         return Ok(await BuildPlan(userId, monday, 7));
     }
 
-    // GET /api/plan/monthly?from=2026-05-01 — all days in the calendar month containing `from`
+    // GET /api/plan/monthly?from=2026-05-25 — 30 days starting from `from` (defaults to today)
     [HttpGet("monthly")]
     public async Task<IActionResult> GetMonthlyPlan([FromQuery] string? from)
     {
@@ -40,9 +40,7 @@ public class PlanController(AppDbContext db) : ControllerBase
         else
             anchor = DateOnly.FromDateTime(DateTime.UtcNow);
 
-        var firstDay = new DateOnly(anchor.Year, anchor.Month, 1);
-        var daysInMonth = DateTime.DaysInMonth(anchor.Year, anchor.Month);
-        return Ok(await BuildPlan(userId, firstDay, daysInMonth));
+        return Ok(await BuildPlan(userId, anchor, 30));
     }
 
     // PATCH /api/plan/{setId}/reschedule — move NextReviewAt to a different date
