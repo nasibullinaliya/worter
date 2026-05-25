@@ -70,43 +70,61 @@ public class PlanController(AppDbContext db) : ControllerBase
     private async Task<List<PlanDayDto>> BuildPlan(Guid userId, DateOnly from, int days)
     {
         var todayUtc = DateOnly.FromDateTime(DateTime.UtcNow);
-        var fromDt = from.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-        var toDt = from.AddDays(days - 1).ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
+        var rangeTo = from.AddDays(days - 1);
 
-        // Include overdue sets (NextReviewAt < from) so they appear on today's date.
-        // Overdue = NextReviewAt is before the start of the range but still within grace period.
-        var overdueFromDt = todayUtc.AddDays(-(ReviewScheduler.GracePeriodDays)).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        // Fetch all active progress records for this user.
+        // For confirmed entries (NextReviewAt within range or overdue within grace period)
+        // and projected entries (future stages computed from Intervals), we need all active records.
+        var overdueFromDt = todayUtc.AddDays(-ReviewScheduler.GracePeriodDays)
+                                    .ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
-        var items = await db.SetProgress
+        var records = await db.SetProgress
             .Where(p => p.UserId == userId &&
                         p.NextReviewAt.HasValue &&
-                        p.NextReviewAt.Value >= overdueFromDt &&
-                        p.NextReviewAt.Value <= toDt &&
                         p.ReviewStage > 0 && p.ReviewStage < 6)
             .Join(db.WordSets,
                   p => p.SetId,
                   s => s.Id,
-                  (p, s) => new { p.NextReviewAt, SetId = s.Id, s.Title, p.TotalWords })
+                  (p, s) => new { p.NextReviewAt, p.ReviewStage, SetId = s.Id, s.Title, p.TotalWords })
             .ToListAsync();
 
-        // Overdue sets (NextReviewAt < today) are placed on today's date.
-        var grouped = items
-            .GroupBy(x =>
+        // Build a lookup: date → list of items
+        var grouped = new Dictionary<DateOnly, List<PlanSetItemDto>>();
+
+        void AddItem(DateOnly date, PlanSetItemDto item)
+        {
+            if (date < from || date > rangeTo) return;
+            if (!grouped.TryGetValue(date, out var list))
+                grouped[date] = list = [];
+            list.Add(item);
+        }
+
+        foreach (var r in records)
+        {
+            var scheduledDate = DateOnly.FromDateTime(r.NextReviewAt!.Value);
+            var isOverdue = scheduledDate < todayUtc && scheduledDate >= todayUtc.AddDays(-ReviewScheduler.GracePeriodDays);
+            var isExpired = scheduledDate < todayUtc.AddDays(-ReviewScheduler.GracePeriodDays);
+
+            if (isExpired) continue; // expired sets are reset, don't show
+
+            // ── Confirmed next review ──────────────────────────────────────────
+            var confirmedDate = isOverdue ? todayUtc : scheduledDate;
+            var graceDaysLeft = isOverdue
+                ? ReviewScheduler.GracePeriodDays - (todayUtc.DayNumber - scheduledDate.DayNumber)
+                : 0;
+            AddItem(confirmedDate, new PlanSetItemDto(r.SetId, r.Title, r.TotalWords, isOverdue, graceDaysLeft, IsProjected: false));
+
+            // ── Projected future stages ────────────────────────────────────────
+            // Starting from the confirmed date, accumulate intervals for each remaining stage.
+            // Intervals[newStage - 1] is added after completing the current stage.
+            var projectedDate = scheduledDate; // project from scheduled (not overdue-shifted) date
+            for (int nextStage = r.ReviewStage + 1; nextStage <= ReviewScheduler.Intervals.Length; nextStage++)
             {
-                var scheduledDate = DateOnly.FromDateTime(x.NextReviewAt!.Value);
-                return scheduledDate < todayUtc ? todayUtc : scheduledDate;
-            })
-            .ToDictionary(
-                g => g.Key,
-                g => g.Select(x =>
-                {
-                    var scheduledDate = DateOnly.FromDateTime(x.NextReviewAt!.Value);
-                    var isOverdue = scheduledDate < todayUtc;
-                    var graceDaysLeft = isOverdue
-                        ? ReviewScheduler.GracePeriodDays - (todayUtc.DayNumber - scheduledDate.DayNumber)
-                        : 0;
-                    return new PlanSetItemDto(x.SetId, x.Title, x.TotalWords, isOverdue, graceDaysLeft);
-                }).ToList());
+                projectedDate = projectedDate.AddDays(ReviewScheduler.Intervals[nextStage - 1]);
+                if (projectedDate > rangeTo) break;
+                AddItem(projectedDate, new PlanSetItemDto(r.SetId, r.Title, r.TotalWords, false, 0, IsProjected: true));
+            }
+        }
 
         return Enumerable.Range(0, days)
             .Select(i =>

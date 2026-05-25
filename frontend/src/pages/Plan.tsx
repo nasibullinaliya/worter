@@ -102,18 +102,27 @@ function DetailPanel({ day, onClose }: { day: PlanDayDto; onClose: () => void })
             <p className="text-sm text-gray-400 text-center pt-8">{t('plan.noReviews')}</p>
           ) : (
             day.sets.map((s) => (
-              <div key={s.setId} className={`rounded-2xl border p-4 ${s.isOverdue ? 'border-amber-200 bg-amber-50' : 'border-gray-100 bg-gray-50'}`}>
+              <div key={`${s.setId}-${s.isProjected}`} className={`rounded-2xl border p-4 ${
+                s.isOverdue ? 'border-amber-200 bg-amber-50'
+                : s.isProjected ? 'border-dashed border-indigo-100 bg-white'
+                : 'border-gray-100 bg-gray-50'
+              }`}>
                 <div className="flex items-start justify-between gap-2 mb-1">
                   <Link
                     to={`/sets/${s.setId}`}
                     onClick={onClose}
-                    className="font-semibold text-gray-800 text-sm leading-snug hover:text-violet-700 transition-colors"
+                    className={`font-semibold text-sm leading-snug hover:text-violet-700 transition-colors ${s.isProjected ? 'text-gray-400' : 'text-gray-800'}`}
                   >
                     {s.title}
                   </Link>
                   {s.isOverdue && (
                     <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700 uppercase tracking-wide">
                       {t('plan.overdue')}
+                    </span>
+                  )}
+                  {s.isProjected && (
+                    <span className="shrink-0 rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-400 uppercase tracking-wide">
+                      {t('plan.projected')}
                     </span>
                   )}
                 </div>
@@ -123,7 +132,7 @@ function DetailPanel({ day, onClose }: { day: PlanDayDto; onClose: () => void })
                     ⏳ {s.graceDaysLeft} {t('plan.graceDaysLeft')}
                   </p>
                 )}
-                {!past && (
+                {!past && !s.isProjected && (
                   <div className="flex gap-2 mt-1">
                     <Link
                       to={`/sets/${s.setId}/study`}
@@ -173,6 +182,8 @@ function DraggableChip({ set, dateStr, past }: { set: PlanSetItemDto; dateStr: s
 
   const normalStyle = set.isOverdue
     ? 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'
+    : set.isProjected
+    ? 'border border-dashed border-indigo-200 text-indigo-400 hover:bg-indigo-50'
     : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
 
   return (
@@ -188,6 +199,8 @@ function DraggableChip({ set, dateStr, past }: { set: PlanSetItemDto; dateStr: s
       {...(!past ? attributes : {})}
       title={set.isOverdue
         ? `${set.title} — ${t('plan.overdue')}, ${set.graceDaysLeft} ${t('plan.graceDaysLeft')}`
+        : set.isProjected
+        ? `${set.title} — прогноз`
         : set.title}
     >
       <span className="flex items-center gap-1 truncate">
@@ -364,10 +377,11 @@ function WeekView({ data, onUpdateData }: { data: PlanDayDto[]; onUpdateData: (d
                   ) : (
                     day.sets.map((set) => (
                       <span
-                        key={set.setId}
+                        key={`${set.setId}-${set.isProjected}`}
                         className={`rounded-lg px-2 py-0.5 text-[11px] font-medium ${
                           past ? 'bg-gray-100 text-gray-400'
                           : set.isOverdue ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                          : set.isProjected ? 'border border-dashed border-indigo-200 text-indigo-400'
                           : 'bg-indigo-50 text-indigo-700'
                         }`}
                       >

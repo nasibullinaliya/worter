@@ -246,6 +246,7 @@ const T = {
     'plan.dropHere': '+ перенести сюда',
     'plan.overdue': 'Долг',
     'plan.graceDaysLeft': 'дн. без потери прогресса',
+    'plan.projected': 'Прогноз',
   },
 
   en: {
@@ -482,6 +483,7 @@ const T = {
     'plan.dropHere': '+ drop here',
     'plan.overdue': 'Overdue',
     'plan.graceDaysLeft': 'days left without losing progress',
+    'plan.projected': 'Forecast',
   },
 
   de: {
@@ -718,6 +720,7 @@ const T = {
     'plan.dropHere': '+ hier ablegen',
     'plan.overdue': 'Überfällig',
     'plan.graceDaysLeft': 'Tage ohne Fortschrittsverlust',
+    'plan.projected': 'Prognose',
   },
 } as const
 

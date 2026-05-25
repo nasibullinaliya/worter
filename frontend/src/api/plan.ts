@@ -6,6 +6,7 @@ export interface PlanSetItemDto {
   totalWords: number
   isOverdue: boolean
   graceDaysLeft: number
+  isProjected: boolean
 }
 
 export interface PlanDayDto {
