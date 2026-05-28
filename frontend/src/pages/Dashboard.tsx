@@ -313,6 +313,9 @@ export default function Dashboard() {
   }, [])
 
   const totalWords = sets.reduce((sum, s) => sum + s.wordCount, 0)
+  const inProgressWords = sets
+    .filter(s => s.progress && s.progress.reviewStage > 0 && s.progress.reviewStage <= FINAL_STAGE)
+    .reduce((sum, s) => sum + s.wordCount, 0)
   const learnedWords = sets
     .filter(s => s.progress && s.progress.reviewStage > FINAL_STAGE)
     .reduce((sum, s) => sum + s.wordCount, 0)
@@ -324,7 +327,7 @@ export default function Dashboard() {
         <div>
           <h2 className="text-2xl font-bold text-gray-900">{t('dashboard.title')}</h2>
           <p className="mt-0.5 text-xs text-gray-400">
-            {totalWords} {t('dashboard.totalWords')}, {learnedWords} {t('dashboard.learnedWords')}
+            {totalWords} {t('dashboard.totalWords')}, {inProgressWords} {t('dashboard.inProgressWords')}, {learnedWords} {t('dashboard.learnedWords')}
           </p>
         </div>
         <div className="flex gap-2">

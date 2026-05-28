@@ -58,7 +58,8 @@ const T = {
     'dashboard.by': 'от',
     'dashboard.studied': 'Изучено',
     'dashboard.totalWords': 'слов всего',
-    'dashboard.learnedWords': 'выучено полностью',
+    'dashboard.inProgressWords': 'в процессе изучения',
+    'dashboard.learnedWords': 'полностью изучено',
 
     // stage labels
     'stage.0': 'День 1',
@@ -310,6 +311,7 @@ const T = {
     'dashboard.by': 'by',
     'dashboard.studied': 'Studied',
     'dashboard.totalWords': 'words total',
+    'dashboard.inProgressWords': 'in progress',
     'dashboard.learnedWords': 'fully learned',
 
     'stage.0': 'Day 1',
@@ -556,6 +558,7 @@ const T = {
     'dashboard.by': 'von',
     'dashboard.studied': 'Gelernt',
     'dashboard.totalWords': 'Wörter gesamt',
+    'dashboard.inProgressWords': 'im Lernprozess',
     'dashboard.learnedWords': 'vollständig gelernt',
 
     'stage.0': 'Tag 1',
