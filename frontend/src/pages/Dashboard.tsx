@@ -323,29 +323,29 @@ export default function Dashboard() {
   return (
     <Layout reminderCount={reminders.length}>
       {/* Top bar */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">{t('dashboard.title')}</h2>
           <p className="mt-0.5 text-xs text-gray-400">
             {totalWords} {t('dashboard.totalWords')}, {inProgressWords} {t('dashboard.inProgressWords')}, {learnedWords} {t('dashboard.learnedWords')}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 sm:flex-shrink-0">
           <Link
             to="/study"
-            className="rounded-full border-2 border-[#6366F1] px-4 py-2 text-sm font-semibold text-[#4F46E5] hover:bg-indigo-50 transition-colors"
+            className="flex-1 sm:flex-none text-center rounded-full border-2 border-[#6366F1] px-4 py-2 text-sm font-semibold text-[#4F46E5] hover:bg-indigo-50 transition-colors"
           >
             {t('dashboard.studyAll')}
           </Link>
           <Link
             to="/test"
-            className="rounded-full border-2 border-[#6366F1] px-4 py-2 text-sm font-semibold text-[#4F46E5] hover:bg-indigo-50 transition-colors"
+            className="flex-1 sm:flex-none text-center rounded-full border-2 border-[#6366F1] px-4 py-2 text-sm font-semibold text-[#4F46E5] hover:bg-indigo-50 transition-colors"
           >
             {t('quiz.quizBtn')}
           </Link>
           <Link
             to="/sets/new"
-            className="rounded-full bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity transition-colors"
+            className="flex-1 sm:flex-none text-center rounded-full bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity transition-colors"
           >
             {t('dashboard.newSet')}
           </Link>
