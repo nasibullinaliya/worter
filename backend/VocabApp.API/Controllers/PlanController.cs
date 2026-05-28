@@ -102,13 +102,17 @@ public class PlanController(AppDbContext db) : ControllerBase
         foreach (var r in records)
         {
             var scheduledDate = DateOnly.FromDateTime(r.NextReviewAt!.Value);
-            var isOverdue = scheduledDate < todayUtc && scheduledDate >= todayUtc.AddDays(-ReviewScheduler.GracePeriodDays);
-            var isExpired = scheduledDate < todayUtc.AddDays(-ReviewScheduler.GracePeriodDays);
+            var isFinalStage = r.ReviewStage == ReviewScheduler.FinalStage;
+
+            // Stage 5 is exempt from grace period and expiry — it can be completed at any time.
+            var isOverdue = !isFinalStage && scheduledDate < todayUtc && scheduledDate >= todayUtc.AddDays(-ReviewScheduler.GracePeriodDays);
+            var isExpired = !isFinalStage && scheduledDate < todayUtc.AddDays(-ReviewScheduler.GracePeriodDays);
 
             if (isExpired) continue; // expired sets are reset, don't show
 
             // ── Confirmed next review ──────────────────────────────────────────
-            var confirmedDate = isOverdue ? todayUtc : scheduledDate;
+            // For overdue sets: pin to today. For final stage: show on scheduled date (or today if past).
+            var confirmedDate = (isOverdue || (isFinalStage && scheduledDate < todayUtc)) ? todayUtc : scheduledDate;
             var graceDaysLeft = isOverdue
                 ? ReviewScheduler.GracePeriodDays - (todayUtc.DayNumber - scheduledDate.DayNumber)
                 : 0;

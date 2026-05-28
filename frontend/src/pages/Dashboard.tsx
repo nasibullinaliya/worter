@@ -7,6 +7,7 @@ import { Layout } from '../components/Layout'
 import { ReviewBanner } from '../components/ReviewBanner'
 import { ProgressBar } from '../components/ProgressBar'
 import { useLang } from '../context/LangContext'
+import { FINAL_STAGE } from '../utils/srs'
 
 // SRS progression days shown in the UI
 export const STAGE_DAYS = [1, 2, 4, 7, 14]
@@ -427,13 +428,19 @@ function SetCard({ set }: { set: SetSummaryDto }) {
         <p className="mb-3 text-xs text-gray-300">{t('dashboard.notStudied')}</p>
       )}
 
-      {/* Footer: word count + stage pips */}
+      {/* Footer: word count + stage pips (or "Completed" badge for stage 6+) */}
       <div className="mt-auto flex items-center justify-between">
         <span className="text-sm text-gray-400">
           {set.wordCount} {wl(set.wordCount)}
         </span>
         <div className="flex items-center gap-2">
-          {p && <StageProgress stage={p.reviewStage} />}
+          {p && p.reviewStage > FINAL_STAGE ? (
+            <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-semibold text-violet-700">
+              ✓ {t('dashboard.completed')}
+            </span>
+          ) : (
+            p && <StageProgress stage={p.reviewStage} />
+          )}
         </div>
       </div>
     </Link>

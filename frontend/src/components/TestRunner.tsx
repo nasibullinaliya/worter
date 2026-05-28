@@ -20,6 +20,8 @@ import {
 
 interface FinishResult {
   nextReviewAt: string | null
+  reviewStage?: number
+  isFinalStageFailed?: boolean
 }
 
 interface Props {
@@ -29,11 +31,12 @@ interface Props {
   onFinish?: (wordResults: { wordId: string; errorCount: number }[]) => Promise<FinishResult | null>
   defaultDirection?: Direction
   skipSettings?: boolean
+  isFinalStage?: boolean
   onBack?: () => void
   lang?: string
 }
 
-type Screen = 'settings' | 'running' | 'stage-review' | 'done'
+type Screen = 'settings' | 'final-banner' | 'running' | 'stage-review' | 'done'
 
 export function TestRunner({
   words,
@@ -42,14 +45,16 @@ export function TestRunner({
   onFinish,
   defaultDirection,
   skipSettings,
+  isFinalStage = false,
   onBack,
   lang,
 }: Props) {
   const { t, wl, dateLocale } = useLang()
 
-  const [screen, setScreen] = useState<Screen>(() =>
-    skipSettings ? 'running' : 'settings',
-  )
+  const [screen, setScreen] = useState<Screen>(() => {
+    if (isFinalStage) return 'final-banner'
+    return skipSettings ? 'running' : 'settings'
+  })
   const [direction, setDirection] = useState<Direction>(
     defaultDirection ?? 'def-to-word',
   )
@@ -123,9 +128,9 @@ export function TestRunner({
     setScreen('running')
   }
 
-  // Auto-start when skipSettings
+  // Auto-start when skipSettings (but not for final stage — show banner first)
   useEffect(() => {
-    if (skipSettings) start()
+    if (skipSettings && !isFinalStage) start()
   }, [])
 
   const current = queue[0] ?? null
@@ -315,6 +320,38 @@ export function TestRunner({
     ) : null
 
   // ─────────────────────────────────────────────────────────────────────────────
+  // FINAL STAGE BANNER
+  // ─────────────────────────────────────────────────────────────────────────────
+  if (screen === 'final-banner') {
+    return (
+      <div className="mx-auto max-w-md py-10">
+        <div className="mb-6">
+          <BackLink className="text-sm text-gray-500 hover:text-gray-700" />
+        </div>
+
+        <div className="mb-8 rounded-2xl border border-violet-200 bg-violet-50 p-6 text-center">
+          <div className="mb-4 flex justify-center">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-violet-100">
+              <svg className="h-7 w-7 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+              </svg>
+            </span>
+          </div>
+          <h2 className="mb-2 text-xl font-bold text-violet-900">{t('test.finalStageTitle')}</h2>
+          <p className="text-sm text-violet-700 leading-relaxed">{t('test.finalStageHint')}</p>
+        </div>
+
+        <button
+          onClick={start}
+          className="w-full rounded-lg bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+        >
+          {t('quiz.startBtn')} ({total} {wl(total)})
+        </button>
+      </div>
+    )
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
   // SETTINGS SCREEN
   // ─────────────────────────────────────────────────────────────────────────────
   if (screen === 'settings') {
@@ -360,6 +397,7 @@ export function TestRunner({
       </div>
     )
   }
+
 
   // ─────────────────────────────────────────────────────────────────────────────
   // STAGE REVIEW SCREEN
@@ -433,6 +471,66 @@ export function TestRunner({
   // ─────────────────────────────────────────────────────────────────────────────
   if (screen === 'done') {
     const score = doneIds.size
+    const isCompleted = finishResult?.reviewStage === 6
+    const isFailed = finishResult?.isFinalStageFailed === true
+
+    // ── Set completed! ─────────────────────────────────────────────────────────
+    if (isCompleted) {
+      return (
+        <div className="mx-auto max-w-md py-10 text-center">
+          <div className="mb-6 flex justify-center">
+            <span className="flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
+              <svg className="h-10 w-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+              </svg>
+            </span>
+          </div>
+          <h2 className="mb-2 text-2xl font-bold text-gray-900">{t('test.setCompleted')}</h2>
+          <p className="mb-8 text-gray-500">{t('test.setCompletedHint')}</p>
+          {onBack ? (
+            <button onClick={onBack} className="rounded-lg bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-opacity">
+              {backLabel}
+            </button>
+          ) : backHref ? (
+            <Link to={backHref} className="inline-block rounded-lg bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-opacity">
+              {backLabel}
+            </Link>
+          ) : null}
+        </div>
+      )
+    }
+
+    // ── Final stage failed ─────────────────────────────────────────────────────
+    if (isFailed) {
+      return (
+        <div className="mx-auto max-w-md py-10 text-center">
+          <div className="mb-6 flex justify-center">
+            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
+              <svg className="h-8 w-8 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </span>
+          </div>
+          <h2 className="mb-2 text-2xl font-bold text-gray-900">{t('test.finalStageFailed')}</h2>
+          <p className="mb-2 text-gray-500">
+            {t('test.correctlyWritten')}{' '}
+            <strong className="text-amber-600">{score}</strong> {t('common.outOf')}{' '}
+            {total}
+          </p>
+          <p className="mb-8 text-sm text-amber-700 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+            {t('test.finalStageFailedHint')}
+          </p>
+          <button
+            onClick={() => { setScreen('final-banner') }}
+            className="rounded-lg bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-5 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+          >
+            {t('test.retake')}
+          </button>
+        </div>
+      )
+    }
+
+    // ── Regular done screen ────────────────────────────────────────────────────
     return (
       <div className="mx-auto max-w-md py-10 text-center">
         <div className="mb-6 flex justify-center">

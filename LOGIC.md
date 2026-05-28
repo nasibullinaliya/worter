@@ -127,11 +127,21 @@ May 23 → 25 → 26 → 28 → 31 → Jun 7
   - Multiple sessions on the same day do not double-advance
   - NextReviewAt is always computed from `now.Date` (the actual study date), so NextReviewAt is guaranteed to be strictly in the future after any review
 
+### Final Stage (Stage 5)
+
+Stage 5 is the last active stage and has special rules:
+
+- **Perfect score required**: `knownCount == totalWords`. A single mistake = the stage does NOT advance; `ReviewStage` and `NextReviewAt` remain unchanged, and the user can retry immediately.
+- **No grace-period expiry**: `IsExpired()` always returns `false` for stage 5. The user can complete the final test any day — even months after the due date — without a penalty reset.
+- **No Study button in Plan/ReviewBanner**: The Plan detail panel and Review banner show only a "Final test" button for stage-5 sets (no "Study" shortcut). Inside the set detail page the Study button is still available so users can review the material before attempting the test.
+- **Completion**: On success (`ReviewStage` advances to 6, `NextReviewAt = null`), a "Set completed" screen is shown and a "✓ Completed" badge appears on the set card and detail header.
+
 ### Grace Period and Restart
 - On every call to `POST /api/progress/{setId}`, the overdue status is checked via `ReviewScheduler.IsExpired()`
 - If `today > NextReviewAt + 3 days` → `Restart`: stage=1, new `FirstStudiedAt = now`, NextReviewAt = today+1
 - Within the grace period (missed by ≤ 3 days): stage advances normally via `RecordReview`
 - Stage 0 with null `NextReviewAt` also triggers `Restart` (manual reset path)
+- **Stage 5 is exempt**: `IsExpired()` returns `false` regardless of how overdue it is
 
 ### ⚠️ Data migration note (2026-05-25)
 Intervals changed from **absolute** `[1, 2, 4, 7, 14]` days from `FirstStudiedAt` to **relative** `[1, 1, 2, 3, 7]` days from actual study date.  
@@ -141,6 +151,7 @@ Migration `20260525085542_FixRelativeIntervalNextReviewAt` corrects existing rec
 - Grey = future stage
 - Bold dark = current (due now)
 - Bold violet = completed stages
+- Stage > 5 (completed): pip row is replaced by a "✓ Completed" badge (violet pill) on the set card and in the set detail header
 
 ---
 
@@ -218,7 +229,7 @@ The session ends only when **all words** pass both phases. By definition, `doneI
 
 ## Quiz Mode — QuizRunner
 
-**Routes**: `/sets/:id/quiz` (single set), used internally by QuizAll
+**Routes**: `/sets/:id/test` (single set), also used for the Final Stage test via `/sets/:id/test?final=1`
 
 ### Behavior
 - All words displayed simultaneously as a table
@@ -233,6 +244,25 @@ The session ends only when **all words** pass both phases. By definition, `doneI
 ### Results screen
 - Green ✓ = correct
 - Red strikethrough = user's wrong answer, correct answer shown below
+
+### Final Stage Test (`?final=1`)
+
+When the route includes `?final=1`, the QuizRunner runs in **final-stage mode**:
+
+| Aspect | Regular test | Final test |
+|---|---|---|
+| Settings screen | Shown (choose mode + direction) | Skipped |
+| Mode | User's choice | Type (forced) |
+| Direction | User's choice | Definition → Word (forced) |
+| On submit | Results screen | Completed or Failed screen |
+| Pass condition | Any | All words correct (`knownCount == totalWords`) |
+| On pass | — | "Set completed 🎉" screen; SRS stage → 6 |
+| On fail | — | Score shown + retry button (back to banner) |
+
+**Flow**: Banner screen → Running → Completed / Failed  
+**Retry** on failure returns to the banner screen (not results).
+
+The quiz interface itself (table of words, type answers, submit button) is identical to the regular test — there are no special input mechanics.
 
 ---
 
@@ -262,13 +292,24 @@ The session ends only when **all words** pass both phases. By definition, `doneI
 
 ---
 
-## Today Page (`/today`)
+## Today Page (`/today`) and Dashboard Review Banner
 
-- Shows sets where `NextReviewAt.Date <= today`
-- Data comes from `GET /api/reminders`
-- "Start test" button → `/sets/:id/test`
-- After completing a test the set disappears on next page load (NextReviewAt moves to the future)
-- Sets overdue by >3 days are reset (stage=0) on the next study session; they still appear on Today until studied
+Both the `/today` page and the Dashboard show a **ReviewBanner** for sets whose `NextReviewAt.Date <= today`.  
+Data comes from `GET /api/reminders`.
+
+Each set card in the banner shows:
+- Set title (link to detail)
+- Word count and stage pip indicators (●●●○○ style)
+- Action buttons — stage-dependent:
+
+| Stage | Buttons shown |
+|---|---|
+| 1–4 | "Study" → `/sets/:id/study` + "Test" → `/sets/:id/test` |
+| 5 (Final) | "Final test" → `/sets/:id/test?final=1` only (no Study button) |
+
+After completing a test the set disappears on next page load (NextReviewAt moves to the future).  
+Sets overdue by >3 days are reset (stage=0) on the next study session; they still appear until studied.  
+Stage-5 sets are **never reset** for being overdue — they always remain visible.
 
 ---
 
@@ -285,13 +326,21 @@ Weekly view of the SRS review schedule. Shows how many words are due per day.
 `GET /api/plan/weekly?from=YYYY-MM-DD` returns 7 `PlanDayDto` objects (Mon–Sun) containing:
 - `date` — ISO date string
 - `totalWords` — total words across all sets due that day
-- `sets[]` — list of `PlanSetItemDto` with `setId`, `title`, `totalWords`, `isOverdue`, `graceDaysLeft`
+- `sets[]` — list of `PlanSetItemDto` with `setId`, `title`, `totalWords`, `isOverdue`, `graceDaysLeft`, `isProjected`, `reviewStage`
 
 ### Overdue sets
 Sets whose `NextReviewAt` is in the past but within the 3-day grace period are:
 - Included in today's plan (not their original due date)
 - Marked with an amber "Долг" badge and a countdown of remaining grace days
 - Visually distinct (amber chip colour vs. indigo for on-time sets)
+
+### Stage 5 sets in the Plan
+Stage-5 sets are **never expired** by the Plan — they always appear on their scheduled day (or today if past) and are never filtered out regardless of how overdue they are. The detail panel shows:
+- **No "Study" button** — only a "Final test" button → `/sets/:id/test?final=1`
+- Stage pip indicators (●●●●● all filled) and word count
+
+### Projected future stages
+For each set in the plan, the backend also computes **projected** reviews for future stages (stages beyond the current one), using the SRS intervals. These are shown with a dashed border and an "Expected" badge. Projected items cannot be dragged.
 
 ### Drag & drop rescheduling
 - Sets can be dragged between day columns using `@dnd-kit/core`

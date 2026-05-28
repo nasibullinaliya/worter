@@ -61,6 +61,7 @@ export default function Test() {
         backLabel={set.title}
         onFinish={handleFinish}
         lang={set.language}
+        defaultDirection="def-to-word"
       />
     </Layout>
   )

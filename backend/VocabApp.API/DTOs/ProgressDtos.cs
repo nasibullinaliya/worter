@@ -18,7 +18,8 @@ public record SetProgressDto(
     DateTime? NextReviewAt,
     int ReviewStage,
     int KnownCount,
-    int TotalWords
+    int TotalWords,
+    bool IsFinalStageFailed = false  // true when stage-5 test was attempted but not passed perfectly
 );
 
 public record WordProgressDto(

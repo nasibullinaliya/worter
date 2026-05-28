@@ -8,6 +8,7 @@ export interface SetProgressDto {
   reviewStage: number
   knownCount: number
   totalWords: number
+  isFinalStageFailed: boolean
 }
 
 export interface WordProgressDto {

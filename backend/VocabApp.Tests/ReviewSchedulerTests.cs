@@ -243,6 +243,95 @@ public class ReviewSchedulerTests
         p.NextReviewAt.Should().BeNull("stage 6 is the final stage");
     }
 
+    // ── Final Stage (stage 5) ─────────────────────────────────────────────────
+    //
+    // Stage 5 is the last active stage. Rules:
+    //  • Requires a PERFECT score (knownCount == totalWords) to complete.
+    //  • A failed attempt keeps the stage at 5 and leaves NextReviewAt unchanged.
+    //  • Is NEVER expired — the user can attempt it any day without penalty.
+
+    [Fact]
+    public void RecordReview_FinalStage_DoesNot_Advance_When_AnyMistakes()
+    {
+        var p = MakeProgress(stage: ReviewScheduler.FinalStage, daysAgo: 1); // due today
+
+        var advanced = ReviewScheduler.RecordReview(p, knownCount: 9, totalWords: 10);
+
+        advanced.Should().BeFalse("imperfect score must not complete the final stage");
+        p.ReviewStage.Should().Be(ReviewScheduler.FinalStage, "stage stays at 5 after a failed attempt");
+    }
+
+    [Fact]
+    public void RecordReview_FinalStage_DoesNot_Advance_When_ZeroKnown()
+    {
+        var p = MakeProgress(stage: ReviewScheduler.FinalStage, daysAgo: 1);
+
+        ReviewScheduler.RecordReview(p, knownCount: 0, totalWords: 10);
+
+        p.ReviewStage.Should().Be(ReviewScheduler.FinalStage);
+    }
+
+    [Fact]
+    public void RecordReview_FinalStage_Advances_To_Complete_When_PerfectScore()
+    {
+        var p = MakeProgress(stage: ReviewScheduler.FinalStage, daysAgo: 1); // due today
+
+        var advanced = ReviewScheduler.RecordReview(p, knownCount: 10, totalWords: 10);
+
+        advanced.Should().BeTrue("perfect score must complete the final stage");
+        p.ReviewStage.Should().Be(ReviewScheduler.FinalStage + 1, "stage moves to 6 (complete)");
+        p.NextReviewAt.Should().BeNull("completed sets have no further review scheduled");
+    }
+
+    [Fact]
+    public void RecordReview_FinalStage_Failed_Leaves_NextReviewAt_Unchanged()
+    {
+        var p = MakeProgress(stage: ReviewScheduler.FinalStage, daysAgo: 1);
+        var originalNextReview = p.NextReviewAt;
+
+        ReviewScheduler.RecordReview(p, knownCount: 8, totalWords: 10);
+
+        p.NextReviewAt.Should().Be(originalNextReview, "NextReviewAt must not change after a failed final-stage attempt");
+    }
+
+    [Fact]
+    public void RecordReview_FinalStage_CanComplete_Even_When_LongOverdue()
+    {
+        // Stage 5 has no expiry — user can complete the final test any time
+        var p = MakeProgress(stage: ReviewScheduler.FinalStage, daysAgo: 0);
+        p.NextReviewAt = DateTime.UtcNow.Date.AddDays(-30); // 30 days overdue
+
+        var advanced = ReviewScheduler.RecordReview(p, knownCount: 10, totalWords: 10);
+
+        advanced.Should().BeTrue("final stage must complete even when extremely overdue");
+        p.ReviewStage.Should().Be(ReviewScheduler.FinalStage + 1);
+    }
+
+    [Fact]
+    public void IsExpired_Returns_False_For_FinalStage_WhenBeyondGracePeriod()
+    {
+        // Stage 5 is exempt from the grace-period expiry rule
+        var p = MakeProgress(stage: ReviewScheduler.FinalStage, daysAgo: 0);
+        p.NextReviewAt = DateTime.UtcNow.Date.AddDays(-(ReviewScheduler.GracePeriodDays + 10));
+
+        ReviewScheduler.IsExpired(p).Should().BeFalse(
+            "stage 5 (final) is exempt from grace-period expiry and must never return IsExpired=true");
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(7)]
+    [InlineData(30)]
+    [InlineData(365)]
+    public void IsExpired_FinalStage_NeverExpires_Regardless_Of_How_Overdue(int daysOverdue)
+    {
+        var p = MakeProgress(stage: ReviewScheduler.FinalStage, daysAgo: 0);
+        p.NextReviewAt = DateTime.UtcNow.Date.AddDays(-daysOverdue);
+
+        ReviewScheduler.IsExpired(p).Should().BeFalse(
+            $"stage 5 (final) overdue by {daysOverdue} days must still not be expired");
+    }
+
     // ── IsExpired ──────────────────────────────────────────────────────────────
 
     [Fact]

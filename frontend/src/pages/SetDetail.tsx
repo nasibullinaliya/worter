@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { getSet, deleteSet, cloneSet, uncloneSet, generateText, type SetDetailDto } from '../api/sets'
-import { getStudyHistory, getAllWords, type SetStudyLogDto, type AllWordsItemDto } from '../api/progress'
+import { getStudyHistory, getAllWords, getProgress, type SetStudyLogDto, type AllWordsItemDto, type SetProgressDto } from '../api/progress'
 import { Layout } from '../components/Layout'
 import { SpeakButton } from '../components/SpeakButton'
 import { useLang } from '../context/LangContext'
+import { FINAL_STAGE } from '../utils/srs'
 
 export default function SetDetail() {
   const { id } = useParams<{ id: string }>()
@@ -18,6 +19,7 @@ export default function SetDetail() {
   const [history, setHistory] = useState<SetStudyLogDto[] | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [historyLoading, setHistoryLoading] = useState(false)
+  const [progress, setProgress] = useState<SetProgressDto | null>(null)
   const [allUserWords, setAllUserWords] = useState<AllWordsItemDto[]>([])
   const [genOpen, setGenOpen] = useState(false)
   const [genLevel, setGenLevel] = useState('A2')
@@ -33,6 +35,7 @@ export default function SetDetail() {
       })
       .catch(() => setError(t('set.notFound')))
       .finally(() => setLoading(false))
+    getProgress(id).then((p) => setProgress(p.setProgress ?? null)).catch(() => {})
     getAllWords().then(setAllUserWords).catch(() => {})
   }, [id])
 
@@ -108,7 +111,7 @@ export default function SetDetail() {
       {/* Header */}
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-2xl font-bold text-gray-900">{set.title}</h2>
             <span
               className={`rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -119,6 +122,11 @@ export default function SetDetail() {
             >
               {set.isPublic ? t('set.publicBadge') : t('set.privateBadge')}
             </span>
+            {progress && progress.reviewStage > FINAL_STAGE && (
+              <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-semibold text-violet-700">
+                ✓ {t('dashboard.completed')}
+              </span>
+            )}
           </div>
           {set.description && (
             <p className="mt-1 text-sm text-gray-500">{set.description}</p>
@@ -172,6 +180,14 @@ export default function SetDetail() {
         </div>
       </div>
 
+      {/* Stage-5 notice */}
+      {progress?.reviewStage === FINAL_STAGE && (
+        <div className="mb-4 flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-800">
+          <span className="text-base">🏁</span>
+          {t('test.finalStageNotice')}
+        </div>
+      )}
+
       {/* Study buttons */}
       {(set.isOwner || set.isSaved) && set.words.length > 0 && (
         <div className="mb-6 flex flex-wrap gap-3">
@@ -187,12 +203,21 @@ export default function SetDetail() {
           >
             {t('set.study')}
           </Link>
-          <Link
-            to={`/sets/${set.id}/test`}
-            className="rounded-full border-2 border-[#6366F1] px-5 py-2 text-sm font-semibold text-[#4F46E5] hover:bg-indigo-50 transition-colors"
-          >
-            {t('quiz.quizBtn')}
-          </Link>
+          {progress?.reviewStage === FINAL_STAGE ? (
+            <Link
+              to={`/sets/${set.id}/test?final=1`}
+              className="rounded-full border-2 border-violet-600 px-5 py-2 text-sm font-semibold text-violet-700 hover:bg-violet-50 transition-colors"
+            >
+              {t('test.finalStageTitle')}
+            </Link>
+          ) : (
+            <Link
+              to={`/sets/${set.id}/test`}
+              className="rounded-full border-2 border-[#6366F1] px-5 py-2 text-sm font-semibold text-[#4F46E5] hover:bg-indigo-50 transition-colors"
+            >
+              {t('quiz.quizBtn')}
+            </Link>
+          )}
           <button
             onClick={() => { setGenText(null); setGenOpen(true) }}
             className="ml-auto rounded-full border-2 border-violet-300 px-5 py-2 text-sm font-semibold text-violet-600 hover:bg-violet-50 transition-colors"

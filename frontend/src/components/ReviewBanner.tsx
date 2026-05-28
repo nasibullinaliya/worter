@@ -1,13 +1,14 @@
 import { Link } from 'react-router-dom'
 import type { ReminderDto } from '../api/sets'
 import { useLang } from '../context/LangContext'
+import { FINAL_STAGE } from '../utils/srs'
 
 interface Props {
   reminders: ReminderDto[]
 }
 
 export function ReviewBanner({ reminders }: Props) {
-  const { t } = useLang()
+  const { t, wl } = useLang()
   if (reminders.length === 0) return null
 
   return (
@@ -31,33 +32,49 @@ export function ReviewBanner({ reminders }: Props) {
         </p>
       </div>
       <div className="flex flex-col gap-2">
-        {reminders.map((r) => (
-          <div
-            key={r.setId}
-            className="rounded-xl border border-indigo-100 bg-white px-4 py-3 shadow-sm"
-          >
-            <Link
-              to={`/sets/${r.setId}`}
-              className="mb-2.5 block truncate text-sm font-semibold text-gray-800 hover:text-violet-700 transition-colors"
+        {reminders.map((r) => {
+          const isFinal = r.reviewStage === FINAL_STAGE
+          return (
+            <div
+              key={r.setId}
+              className="rounded-2xl border border-gray-100 bg-gray-50 p-4"
             >
-              {r.title}
-            </Link>
-            <div className="flex gap-2">
+              {/* Title */}
               <Link
-                to={`/sets/${r.setId}/study`}
-                className="flex-1 rounded-full border border-violet-200 bg-violet-50 py-1.5 text-center text-xs font-semibold text-violet-700 hover:bg-violet-100 transition-colors"
+                to={`/sets/${r.setId}`}
+                className="mb-1 block truncate text-sm font-semibold text-gray-800 hover:text-violet-700 transition-colors"
               >
-                {t('plan.startStudy')}
+                {r.title}
               </Link>
-              <Link
-                to={`/sets/${r.setId}/test`}
-                className="flex-1 rounded-full bg-violet-600 py-1.5 text-center text-xs font-semibold text-white hover:bg-violet-700 transition-colors"
-              >
-                {t('plan.startTest')}
-              </Link>
+              {/* Word count + stage pips */}
+              <div className="flex items-center gap-1.5 mb-3">
+                <p className="text-xs text-gray-400">{r.totalWords} {wl(r.totalWords)}</p>
+                <span className="text-[10px] tracking-tight text-gray-300">
+                  {Array.from({ length: FINAL_STAGE }, (_, i) => (
+                    <span key={i}>{i < r.reviewStage ? '●' : '○'}</span>
+                  ))}
+                </span>
+              </div>
+              {/* Buttons */}
+              <div className="flex gap-2">
+                {!isFinal && (
+                  <Link
+                    to={`/sets/${r.setId}/study`}
+                    className="flex-1 rounded-xl border border-violet-200 bg-violet-50 py-2 text-center text-xs font-semibold text-violet-700 hover:bg-violet-100 transition-colors"
+                  >
+                    {t('plan.startStudy')}
+                  </Link>
+                )}
+                <Link
+                  to={isFinal ? `/sets/${r.setId}/test?final=1` : `/sets/${r.setId}/test`}
+                  className="flex-1 rounded-xl bg-violet-600 py-2 text-center text-xs font-semibold text-white hover:bg-violet-700 transition-colors"
+                >
+                  {isFinal ? t('test.finalStageTitle') : t('plan.startTest')}
+                </Link>
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

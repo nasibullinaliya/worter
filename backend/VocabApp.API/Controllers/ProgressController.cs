@@ -67,6 +67,8 @@ public class ProgressController(AppDbContext db) : ControllerBase
         // Upsert SetProgress
         var setProgress = await db.SetProgress.FirstOrDefaultAsync(p => p.UserId == userId && p.SetId == setId);
         var stageBefore = setProgress?.ReviewStage ?? 0;
+        bool isFinalStageFailed = false;
+
         if (setProgress == null)
         {
             setProgress = ReviewScheduler.StartTracking(userId, setId, knownCount, wordIds.Count);
@@ -80,7 +82,13 @@ public class ProgressController(AppDbContext db) : ControllerBase
         }
         else
         {
-            ReviewScheduler.RecordReview(setProgress, knownCount, wordIds.Count);
+            // RecordReview returns false if the stage was NOT advanced (not due yet, or final stage failed)
+            bool advanced = ReviewScheduler.RecordReview(setProgress, knownCount, wordIds.Count);
+            isFinalStageFailed = !advanced
+                && stageBefore == ReviewScheduler.FinalStage
+                && setProgress.NextReviewAt.HasValue
+                && setProgress.NextReviewAt.Value.Date <= DateTime.UtcNow.Date
+                && knownCount < wordIds.Count;
         }
 
         // Write study history log
@@ -102,7 +110,7 @@ public class ProgressController(AppDbContext db) : ControllerBase
 
         await db.SaveChangesAsync();
 
-        return Ok(ToDto(setProgress));
+        return Ok(ToDto(setProgress, isFinalStageFailed));
     }
 
     // GET /api/progress/{setId}
@@ -342,6 +350,6 @@ public class ProgressController(AppDbContext db) : ControllerBase
             row.WordCount += wordCount;
     }
 
-    private static SetProgressDto ToDto(SetProgress p) =>
-        new(p.SetId, p.FirstStudiedAt, p.LastStudiedAt, p.NextReviewAt, p.ReviewStage, p.KnownCount, p.TotalWords);
+    private static SetProgressDto ToDto(SetProgress p, bool isFinalStageFailed = false) =>
+        new(p.SetId, p.FirstStudiedAt, p.LastStudiedAt, p.NextReviewAt, p.ReviewStage, p.KnownCount, p.TotalWords, isFinalStageFailed);
 }

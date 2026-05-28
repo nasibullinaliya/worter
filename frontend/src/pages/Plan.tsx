@@ -141,25 +141,27 @@ function DetailPanel({ day, onClose }: { day: PlanDayDto; onClose: () => void })
                 )}
                 {!past && !s.isProjected && (
                   <div className="flex gap-2 mt-1">
+                    {s.reviewStage < 5 && (
+                      <Link
+                        to={`/sets/${s.setId}/study`}
+                        className={`flex-1 rounded-xl py-2 text-center text-xs font-semibold transition-colors ${
+                          s.isOverdue
+                            ? 'border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                            : 'border border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100'
+                        }`}
+                        onClick={onClose}
+                      >
+                        {t('plan.startStudy')}
+                      </Link>
+                    )}
                     <Link
-                      to={`/sets/${s.setId}/study`}
-                      className={`flex-1 rounded-xl py-2 text-center text-xs font-semibold transition-colors ${
-                        s.isOverdue
-                          ? 'border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100'
-                          : 'border border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100'
-                      }`}
-                      onClick={onClose}
-                    >
-                      {t('plan.startStudy')}
-                    </Link>
-                    <Link
-                      to={`/sets/${s.setId}/test`}
+                      to={s.reviewStage === 5 ? `/sets/${s.setId}/test?final=1` : `/sets/${s.setId}/test`}
                       className={`flex-1 rounded-xl py-2 text-center text-xs font-semibold text-white transition-colors ${
                         s.isOverdue ? 'bg-amber-500 hover:bg-amber-600' : 'bg-violet-600 hover:bg-violet-700'
                       }`}
                       onClick={onClose}
                     >
-                      {t('plan.startTest')}
+                      {s.reviewStage === 5 ? t('test.finalStageTitle') : t('plan.startTest')}
                     </Link>
                   </div>
                 )}

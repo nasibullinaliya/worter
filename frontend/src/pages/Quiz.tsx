@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { getSet, type SetDetailDto } from '../api/sets'
 import { recordSession } from '../api/progress'
 import { QuizRunner } from '../components/QuizRunner'
@@ -11,6 +11,9 @@ export default function Quiz() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { t } = useLang()
+  const [searchParams] = useSearchParams()
+  const isFinalStage = searchParams.get('final') === '1'
+
   const [set, setSet] = useState<SetDetailDto | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -50,6 +53,7 @@ export default function Quiz() {
     definition: w.definition,
   }))
 
+  // Regular test: fire-and-forget session recording
   const handleComplete = (knownWordIds: string[], unknownWordIds: string[]) => {
     const wordResults = [
       ...knownWordIds.map((wordId) => ({ wordId, errorCount: 0 })),
@@ -58,13 +62,28 @@ export default function Quiz() {
     if (id) recordSession(id, wordResults).catch(() => {})
   }
 
+  // Final stage: await session result to show completed / failed screen
+  const handleFinalFinish = async (knownWordIds: string[], unknownWordIds: string[]) => {
+    const wordResults = [
+      ...knownWordIds.map((wordId) => ({ wordId, errorCount: 0 })),
+      ...unknownWordIds.map((wordId) => ({ wordId, errorCount: 1 })),
+    ]
+    try {
+      return await recordSession(id!, wordResults)
+    } catch {
+      return null
+    }
+  }
+
   return (
     <Layout>
       <QuizRunner
         words={words}
         backLabel={`← ${set.title}`}
         onBack={() => navigate(`/sets/${id}`)}
-        onComplete={handleComplete}
+        onComplete={isFinalStage ? undefined : handleComplete}
+        isFinalStage={isFinalStage}
+        onFinalFinish={isFinalStage ? handleFinalFinish : undefined}
       />
     </Layout>
   )

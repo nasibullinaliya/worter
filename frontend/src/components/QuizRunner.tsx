@@ -11,7 +11,12 @@ import {
 } from '../utils/testEngine'
 
 type QuizMode = 'type' | 'choice'
-type Screen = 'setup' | 'running' | 'results'
+type Screen = 'banner' | 'setup' | 'running' | 'results' | 'completed' | 'failed'
+
+interface FinishResult {
+  reviewStage?: number
+  isFinalStageFailed?: boolean
+}
 
 interface Props {
   words: TestWord[]
@@ -21,8 +26,11 @@ interface Props {
   skipSettings?: boolean
   defaultMode?: QuizMode
   defaultDirection?: Direction
-  /** Called once when the quiz results are shown for the first time */
+  /** Called once when the quiz results are shown for the first time (non-final stage) */
   onComplete?: (knownWordIds: string[], unknownWordIds: string[]) => void
+  /** Final stage: async handler that records the session and returns the result */
+  isFinalStage?: boolean
+  onFinalFinish?: (knownWordIds: string[], unknownWordIds: string[]) => Promise<FinishResult | null>
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -37,25 +45,28 @@ export function QuizRunner({
   defaultMode = 'type',
   defaultDirection = 'def-to-word',
   onComplete,
+  isFinalStage = false,
+  onFinalFinish,
 }: Props) {
   const { t, wl } = useLang()
 
-  const [screen, setScreen] = useState<Screen>(skipSettings ? 'running' : 'setup')
-  const [mode, setMode] = useState<QuizMode>(defaultMode)
-  const [direction, setDirection] = useState<Direction>(defaultDirection)
+  const initialScreen: Screen = isFinalStage ? 'banner' : (skipSettings ? 'running' : 'setup')
 
-  // running state
+  const [screen, setScreen] = useState<Screen>(initialScreen)
+  const [mode, setMode] = useState<QuizMode>(isFinalStage ? 'type' : defaultMode)
+  const [direction, setDirection] = useState<Direction>(isFinalStage ? 'def-to-word' : defaultDirection)
+
   const [quizWords, setQuizWords] = useState<TestWord[]>(() =>
-    skipSettings ? shuffle(words) : [],
+    (skipSettings || isFinalStage) ? shuffle(words) : [],
   )
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [selectedChoices, setSelectedChoices] = useState<Record<string, string>>({})
   const [choices, setChoices] = useState<Record<string, string[]>>({})
+  const [submitting, setSubmitting] = useState(false)
 
   // when true, show TestRunner for mistake words instead of quiz
   const [studyingMistakes, setStudyingMistakes] = useState(false)
 
-  // Pre-compute choices when starting (for choice mode)
   const initChoices = (shuffled: TestWord[], dir: Direction): Record<string, string[]> => {
     const c: Record<string, string[]> = {}
     for (const w of shuffled) {
@@ -75,19 +86,31 @@ export function QuizRunner({
     setScreen('running')
   }
 
-  // Track whether onComplete has been fired for the current attempt
   const [completedFired, setCompletedFired] = useState(false)
 
-  const handleCheck = () => {
+  const handleCheck = async () => {
+    const knownIds = quizWords
+      .filter((w) => {
+        const ans = mode === 'type' ? (answers[w.wordId] ?? '') : (selectedChoices[w.wordId] ?? '')
+        return checkAnswer(ans, getAnswer(w, direction))
+      })
+      .map((w) => w.wordId)
+    const unknownIds = quizWords.filter((w) => !knownIds.includes(w.wordId)).map((w) => w.wordId)
+
+    if (isFinalStage && onFinalFinish) {
+      setSubmitting(true)
+      try {
+        const result = await onFinalFinish(knownIds, unknownIds)
+        setScreen(result?.reviewStage === 6 ? 'completed' : 'failed')
+      } finally {
+        setSubmitting(false)
+      }
+      return
+    }
+
+    // Regular test
     setScreen('results')
     if (onComplete && !completedFired) {
-      const knownIds = quizWords
-        .filter((w) => {
-          const ans = mode === 'type' ? (answers[w.wordId] ?? '') : (selectedChoices[w.wordId] ?? '')
-          return checkAnswer(ans, getAnswer(w, direction))
-        })
-        .map((w) => w.wordId)
-      const unknownIds = quizWords.filter((w) => !knownIds.includes(w.wordId)).map((w) => w.wordId)
       onComplete(knownIds, unknownIds)
       setCompletedFired(true)
     }
@@ -102,10 +125,13 @@ export function QuizRunner({
     if (mode === 'choice') {
       setChoices(initChoices(shuffled, direction))
     }
-    setScreen('running')
+    if (isFinalStage) {
+      setScreen('banner')
+    } else {
+      setScreen('running')
+    }
   }
 
-  // Compute per-word results (only meaningful on results screen)
   const results = quizWords.map((w) => {
     const userAnswer =
       mode === 'type' ? (answers[w.wordId] ?? '') : (selectedChoices[w.wordId] ?? '')
@@ -129,7 +155,90 @@ export function QuizRunner({
     )
   }
 
-  // — Setup screen —
+  // ── Final stage banner ────────────────────────────────────────────────────────
+  if (screen === 'banner') {
+    return (
+      <div className="mx-auto max-w-md py-10">
+        <div className="mb-6">
+          <button onClick={onBack} className="text-sm text-gray-500 hover:text-gray-700">
+            {backLabel ?? '←'}
+          </button>
+        </div>
+        <div className="mb-8 rounded-2xl border border-violet-200 bg-violet-50 p-6 text-center">
+          <div className="mb-4 flex justify-center">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-violet-100">
+              <svg className="h-7 w-7 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+              </svg>
+            </span>
+          </div>
+          <h2 className="mb-2 text-xl font-bold text-violet-900">{t('test.finalStageTitle')}</h2>
+          <p className="text-sm text-violet-700 leading-relaxed">{t('test.finalStageHint')}</p>
+        </div>
+        <button
+          onClick={handleStart}
+          className="w-full rounded-lg bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+        >
+          {t('quiz.startBtn')} ({words.length} {wl(words.length)})
+        </button>
+      </div>
+    )
+  }
+
+  // ── Set completed! ────────────────────────────────────────────────────────────
+  if (screen === 'completed') {
+    return (
+      <div className="mx-auto max-w-md py-10 text-center">
+        <div className="mb-6 flex justify-center">
+          <span className="flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
+            <svg className="h-10 w-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+            </svg>
+          </span>
+        </div>
+        <h2 className="mb-2 text-2xl font-bold text-gray-900">{t('test.setCompleted')}</h2>
+        <p className="mb-8 text-gray-500">{t('test.setCompletedHint')}</p>
+        <button
+          onClick={onBack}
+          className="rounded-lg bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+        >
+          {backLabel ?? '←'}
+        </button>
+      </div>
+    )
+  }
+
+  // ── Final stage failed ────────────────────────────────────────────────────────
+  if (screen === 'failed') {
+    return (
+      <div className="mx-auto max-w-md py-10 text-center">
+        <div className="mb-6 flex justify-center">
+          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
+            <svg className="h-8 w-8 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </span>
+        </div>
+        <h2 className="mb-2 text-2xl font-bold text-gray-900">{t('test.finalStageFailed')}</h2>
+        <p className="mb-2 text-gray-500">
+          {t('test.correctlyWritten')}{' '}
+          <strong className="text-amber-600">{correctCount}</strong> {t('common.outOf')}{' '}
+          {quizWords.length}
+        </p>
+        <p className="mb-8 text-sm text-amber-700 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+          {t('test.finalStageFailedHint')}
+        </p>
+        <button
+          onClick={handleRetake}
+          className="rounded-lg bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-5 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+        >
+          {t('test.retake')}
+        </button>
+      </div>
+    )
+  }
+
+  // ── Setup screen ──────────────────────────────────────────────────────────────
   if (screen === 'setup') {
     return (
       <div className="mx-auto max-w-md py-10">
@@ -189,7 +298,7 @@ export function QuizRunner({
     )
   }
 
-  // — Running screen —
+  // ── Running screen ────────────────────────────────────────────────────────────
   if (screen === 'running') {
     const allAnswered =
       mode === 'type'
@@ -200,10 +309,10 @@ export function QuizRunner({
       <div className="mx-auto max-w-2xl py-6">
         <div className="mb-4 flex items-center justify-between">
           <button
-            onClick={() => (skipSettings ? onBack() : setScreen('setup'))}
+            onClick={() => isFinalStage ? setScreen('banner') : (skipSettings ? onBack() : setScreen('setup'))}
             className="text-sm text-gray-500 hover:text-gray-700"
           >
-            {skipSettings ? (backLabel ?? '←') : `← ${t('test.settingsTitle')}`}
+            {isFinalStage || skipSettings ? (backLabel ?? '←') : `← ${t('test.settingsTitle')}`}
           </button>
           <span className="text-sm text-gray-500">
             {quizWords.length} {wl(quizWords.length)}
@@ -231,7 +340,7 @@ export function QuizRunner({
 
                 {mode === 'type' ? (
                   <input
-                      spellCheck={false}
+                    spellCheck={false}
                     value={answers[word.wordId] ?? ''}
                     onChange={(e) =>
                       setAnswers((prev) => ({ ...prev, [word.wordId]: e.target.value }))
@@ -268,10 +377,10 @@ export function QuizRunner({
 
         <button
           onClick={handleCheck}
-          disabled={!allAnswered}
+          disabled={!allAnswered || submitting}
           className="w-full rounded-lg bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity disabled:opacity-40"
         >
-          {t('quiz.checkBtn')}
+          {submitting ? '...' : t('quiz.checkBtn')}
         </button>
         {!allAnswered && (
           <p className="mt-2 text-center text-xs text-gray-400">
@@ -282,7 +391,7 @@ export function QuizRunner({
     )
   }
 
-  // — Results screen —
+  // ── Results screen (regular test only) ───────────────────────────────────────
   return (
     <div className="mx-auto max-w-2xl py-6">
       <div className="mb-4 flex items-center justify-between">
@@ -306,7 +415,6 @@ export function QuizRunner({
       )}
 
       <div className="mb-6 overflow-hidden rounded-xl border bg-white shadow-sm">
-        {/* Header */}
         <div className="grid grid-cols-[1fr_1fr_24px] border-b bg-gray-50 px-5 py-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
           <span>
             {direction === 'def-to-word' ? t('test.definition') : t('test.term')}

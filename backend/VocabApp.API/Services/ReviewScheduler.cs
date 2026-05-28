@@ -12,14 +12,19 @@ public static class ReviewScheduler
     // Stage 2 done → review in +1 day
     // Stage 3 done → review in +2 days
     // Stage 4 done → review in +3 days
-    // Stage 5 done → review in +7 days
+    // Stage 5 done → FINAL STAGE (see below)
     // Stage 6 = complete (NextReviewAt = null)
     //
     // Without missed days from May 23: 23 → 24 → 25 → 27 → 30 → Jun 6
     // With stage-2 missed (studied May 25): 23 → 25 → 26 → 28 → 31 → Jun 7
     public static readonly int[] Intervals = [1, 1, 2, 3, 7];
 
+    // The last active stage. Requires a PERFECT test (knownCount == totalWords) to complete.
+    // No grace-period reset applies — the user can attempt it any day after the due date.
+    public const int FinalStage = 5; // = Intervals.Length
+
     // If a review is overdue by more than this many days → reset the cycle.
+    // The FinalStage is exempt: the user can complete it at any time without penalty.
     public const int GracePeriodDays = 3;
 
     public static SetProgress StartTracking(Guid userId, Guid setId, int knownCount, int totalWords)
@@ -39,7 +44,8 @@ public static class ReviewScheduler
         };
     }
 
-    public static void RecordReview(SetProgress progress, int knownCount, int totalWords)
+    /// Records a review session. Returns true if the stage was advanced, false otherwise.
+    public static bool RecordReview(SetProgress progress, int knownCount, int totalWords)
     {
         var now = DateTime.UtcNow;
         progress.LastStudiedAt = now;
@@ -48,22 +54,30 @@ public static class ReviewScheduler
 
         // Advance stage only when the scheduled review calendar day has arrived.
         // Multiple sessions on the same day do NOT advance the stage.
-        if (progress.NextReviewAt.HasValue && progress.NextReviewAt.Value.Date <= now.Date)
-        {
-            progress.ReviewStage = Math.Min(progress.ReviewStage + 1, Intervals.Length + 1);
+        if (!progress.NextReviewAt.HasValue || progress.NextReviewAt.Value.Date > now.Date)
+            return false;
 
-            // Next review is relative to today (the actual study date), not FirstStudiedAt.
-            // This ensures a missed day shifts the schedule forward rather than causing
-            // NextReviewAt to land on today again.
-            progress.NextReviewAt = progress.ReviewStage <= Intervals.Length
-                ? now.Date.AddDays(Intervals[progress.ReviewStage - 1])
-                : null;
-        }
+        // Final stage: requires a perfect score (all words known, no errors).
+        if (progress.ReviewStage == FinalStage && knownCount < totalWords)
+            return false;
+
+        progress.ReviewStage = Math.Min(progress.ReviewStage + 1, Intervals.Length + 1);
+
+        // Next review is relative to today (the actual study date), not FirstStudiedAt.
+        // This ensures a missed day shifts the schedule forward rather than causing
+        // NextReviewAt to land on today again.
+        progress.NextReviewAt = progress.ReviewStage <= Intervals.Length
+            ? now.Date.AddDays(Intervals[progress.ReviewStage - 1])
+            : null;
+
+        return true;
     }
 
     /// Returns true when the review deadline has been missed by more than GracePeriodDays.
+    /// The FinalStage is exempt — it never expires.
     public static bool IsExpired(SetProgress p) =>
         p.NextReviewAt.HasValue &&
+        p.ReviewStage < FinalStage &&
         DateTime.UtcNow.Date > p.NextReviewAt.Value.Date.AddDays(GracePeriodDays);
 
     /// Resets the SRS cycle — user must start fresh from day 1.
