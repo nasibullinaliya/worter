@@ -211,10 +211,12 @@ function DraggableChip({ set, dateStr, past }: { set: PlanSetItemDto; dateStr: s
         ? `${set.title} — прогноз`
         : set.title}
     >
-      <span className="flex items-center gap-1 truncate">
-        {set.isOverdue && <span className="shrink-0">⚠</span>}
-        <span className="truncate">{set.title}</span>
-        <span className="shrink-0 ml-auto pl-1 opacity-60 tracking-tight text-[9px]">
+      <span className="flex flex-col gap-0.5">
+        <span className="flex items-center gap-1 truncate">
+          {set.isOverdue && <span className="shrink-0">⚠</span>}
+          <span className="truncate">{set.title}</span>
+        </span>
+        <span className="opacity-50 tracking-tight text-[9px] leading-none">
           {Array.from({ length: 5 }, (_, i) => (
             <span key={i}>{i < set.reviewStage ? '●' : '○'}</span>
           ))}
