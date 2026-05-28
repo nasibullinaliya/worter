@@ -126,7 +126,14 @@ function DetailPanel({ day, onClose }: { day: PlanDayDto; onClose: () => void })
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-gray-400 mb-1">{s.totalWords} {wl(s.totalWords)}</p>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <p className="text-xs text-gray-400">{s.totalWords} {wl(s.totalWords)}</p>
+                  <span className="text-[10px] tracking-tight text-gray-300">
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <span key={i}>{i < s.reviewStage ? '●' : '○'}</span>
+                    ))}
+                  </span>
+                </div>
                 {s.isOverdue && (
                   <p className="text-[11px] text-amber-600 mb-3">
                     ⏳ {s.graceDaysLeft} {t('plan.graceDaysLeft')}
@@ -207,6 +214,11 @@ function DraggableChip({ set, dateStr, past }: { set: PlanSetItemDto; dateStr: s
       <span className="flex items-center gap-1 truncate">
         {set.isOverdue && <span className="shrink-0">⚠</span>}
         <span className="truncate">{set.title}</span>
+        <span className="shrink-0 ml-auto pl-1 opacity-60 tracking-tight text-[9px]">
+          {Array.from({ length: 5 }, (_, i) => (
+            <span key={i}>{i < set.reviewStage ? '●' : '○'}</span>
+          ))}
+        </span>
       </span>
     </div>
   )

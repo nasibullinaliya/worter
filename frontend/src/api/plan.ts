@@ -7,6 +7,7 @@ export interface PlanSetItemDto {
   isOverdue: boolean
   graceDaysLeft: number
   isProjected: boolean
+  reviewStage: number
 }
 
 export interface PlanDayDto {

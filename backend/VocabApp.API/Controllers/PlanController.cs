@@ -112,7 +112,7 @@ public class PlanController(AppDbContext db) : ControllerBase
             var graceDaysLeft = isOverdue
                 ? ReviewScheduler.GracePeriodDays - (todayUtc.DayNumber - scheduledDate.DayNumber)
                 : 0;
-            AddItem(confirmedDate, new PlanSetItemDto(r.SetId, r.Title, r.TotalWords, isOverdue, graceDaysLeft, IsProjected: false));
+            AddItem(confirmedDate, new PlanSetItemDto(r.SetId, r.Title, r.TotalWords, isOverdue, graceDaysLeft, IsProjected: false, ReviewStage: r.ReviewStage));
 
             // ── Projected future stages ────────────────────────────────────────
             // Starting from the confirmed date, accumulate intervals for each remaining stage.
@@ -122,7 +122,7 @@ public class PlanController(AppDbContext db) : ControllerBase
             {
                 projectedDate = projectedDate.AddDays(ReviewScheduler.Intervals[nextStage - 1]);
                 if (projectedDate > rangeTo) break;
-                AddItem(projectedDate, new PlanSetItemDto(r.SetId, r.Title, r.TotalWords, false, 0, IsProjected: true));
+                AddItem(projectedDate, new PlanSetItemDto(r.SetId, r.Title, r.TotalWords, false, 0, IsProjected: true, ReviewStage: nextStage));
             }
         }
 
