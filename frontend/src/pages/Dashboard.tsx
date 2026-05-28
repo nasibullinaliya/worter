@@ -312,11 +312,21 @@ export default function Dashboard() {
       .finally(() => setLoading(false))
   }, [])
 
+  const totalWords = sets.reduce((sum, s) => sum + s.wordCount, 0)
+  const learnedWords = sets
+    .filter(s => s.progress && s.progress.reviewStage > FINAL_STAGE)
+    .reduce((sum, s) => sum + s.wordCount, 0)
+
   return (
     <Layout reminderCount={reminders.length}>
       {/* Top bar */}
       <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">{t('dashboard.title')}</h2>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">{t('dashboard.title')}</h2>
+          <p className="mt-0.5 text-xs text-gray-400">
+            {totalWords} {t('dashboard.totalWords')}, {learnedWords} {t('dashboard.learnedWords')}
+          </p>
+        </div>
         <div className="flex gap-2">
           <Link
             to="/study"

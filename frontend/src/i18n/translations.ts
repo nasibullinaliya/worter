@@ -57,6 +57,8 @@ const T = {
     'dashboard.viewWeekly': 'Недельный прогресс',
     'dashboard.by': 'от',
     'dashboard.studied': 'Изучено',
+    'dashboard.totalWords': 'слов всего',
+    'dashboard.learnedWords': 'выучено полностью',
 
     // stage labels
     'stage.0': 'День 1',
@@ -307,6 +309,8 @@ const T = {
     'dashboard.viewWeekly': 'View weekly progress',
     'dashboard.by': 'by',
     'dashboard.studied': 'Studied',
+    'dashboard.totalWords': 'words total',
+    'dashboard.learnedWords': 'fully learned',
 
     'stage.0': 'Day 1',
     'stage.1': 'Day 2',
@@ -551,6 +555,8 @@ const T = {
     'dashboard.viewWeekly': 'Wochenfortschritt anzeigen',
     'dashboard.by': 'von',
     'dashboard.studied': 'Gelernt',
+    'dashboard.totalWords': 'Wörter gesamt',
+    'dashboard.learnedWords': 'vollständig gelernt',
 
     'stage.0': 'Tag 1',
     'stage.1': 'Tag 2',
