@@ -102,7 +102,10 @@ public class ProgressController(AppDbContext db) : ControllerBase
             // Count all completed words across existing sessions + this session
             var completedInExisting = existing.Values.Count(wp => wp.IsFinalCompleted); // includes just-updated
             var completedNewlyCreated = newlyCreated.Values.Count(wp => wp.IsFinalCompleted);
-            var allCompleted = (completedInExisting + completedNewlyCreated) == wordIds.Count;
+            var totalCompleted = completedInExisting + completedNewlyCreated;
+            var allCompleted = totalCompleted == wordIds.Count;
+
+            setProgress.FinalCompletedCount = totalCompleted;
 
             if (allCompleted)
             {

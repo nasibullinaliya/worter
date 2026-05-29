@@ -20,7 +20,8 @@ public record SetProgressSummary(
     int KnownCount,
     int TotalWords,
     DateTime? NextReviewAt,
-    int ReviewStage
+    int ReviewStage,
+    int FinalCompletedCount = 0
 );
 
 public record SetSummaryDto(

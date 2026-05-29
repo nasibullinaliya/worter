@@ -436,7 +436,9 @@ function SetCard({ set }: { set: SetSummaryDto }) {
 
       {/* Progress */}
       {p ? (
-        <ProgressBar known={p.knownCount} total={p.totalWords} className="mb-3" />
+        p.reviewStage >= FINAL_STAGE
+          ? <ProgressBar known={p.finalCompletedCount} total={set.wordCount} className="mb-3" />
+          : <ProgressBar known={p.knownCount} total={p.totalWords} className="mb-3" />
       ) : (
         <p className="mb-3 text-xs text-gray-300">{t('dashboard.notStudied')}</p>
       )}

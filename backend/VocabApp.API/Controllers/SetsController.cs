@@ -28,7 +28,7 @@ public class SetsController(AppDbContext db) : ControllerBase
 
         SetProgressSummary? GetProgress(Guid setId) =>
             progressMap.TryGetValue(setId, out var p)
-                ? new SetProgressSummary(p.KnownCount, p.TotalWords, p.NextReviewAt, p.ReviewStage)
+                ? new SetProgressSummary(p.KnownCount, p.TotalWords, p.NextReviewAt, p.ReviewStage, p.FinalCompletedCount)
                 : null;
 
         var owned = await db.WordSets

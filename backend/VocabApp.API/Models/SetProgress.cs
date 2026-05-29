@@ -12,6 +12,7 @@ public class SetProgress
     public int ReviewStage { get; set; }
     public int KnownCount { get; set; }
     public int TotalWords { get; set; }
+    public int FinalCompletedCount { get; set; }
 
     public User User { get; set; } = null!;
     public WordSet Set { get; set; } = null!;

@@ -14,6 +14,7 @@ export interface SetProgressSummary {
   totalWords: number
   nextReviewAt: string | null
   reviewStage: number
+  finalCompletedCount: number
 }
 
 export interface SetSummaryDto {
