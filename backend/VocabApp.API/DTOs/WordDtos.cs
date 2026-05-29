@@ -7,7 +7,8 @@ public record WordDto(
     string Term,
     string Definition,
     string? Example,
-    int Position
+    int Position,
+    bool IsFinalCompleted = false
 );
 
 public record CreateWordRequest(

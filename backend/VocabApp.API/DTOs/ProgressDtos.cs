@@ -7,7 +7,7 @@ namespace VocabApp.API.DTOs;
 /// <param name="ErrorCount">Number of mistakes made on this word (0 = perfect).</param>
 public record WordSessionResult(Guid WordId, int ErrorCount);
 
-public record RecordSessionRequest([Required] List<WordSessionResult> WordResults);
+public record RecordSessionRequest([Required] List<WordSessionResult> WordResults, bool IsFinalStage = false);
 
 public record RecordWordProgressRequest([Required] List<WordSessionResult> WordResults);
 

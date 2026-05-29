@@ -38,8 +38,8 @@ export interface WordSessionResult {
   errorCount: number
 }
 
-export const recordSession = (setId: string, wordResults: WordSessionResult[]) =>
-  client.post<SetProgressDto>(`/api/progress/${setId}`, { wordResults }).then((r) => r.data)
+export const recordSession = (setId: string, wordResults: WordSessionResult[], isFinalStage = false) =>
+  client.post<SetProgressDto>(`/api/progress/${setId}`, { wordResults, isFinalStage }).then((r) => r.data)
 
 export const getProgress = (setId: string) =>
   client.get<ProgressDetailDto>(`/api/progress/${setId}`).then((r) => r.data)

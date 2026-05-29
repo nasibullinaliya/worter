@@ -94,7 +94,17 @@ public class SetsController(AppDbContext db) : ControllerBase
         if (!isOwner && !isSaved && !set.IsPublic)
             return Forbid();
 
-        var words = set.Words.Select(w => new WordDto(w.Id, w.Term, w.Definition, w.Example, w.Position)).ToList();
+        // Load per-word final-completion status for authenticated user
+        var wordIds = set.Words.Select(w => w.Id).ToHashSet();
+        var finalCompletedList = await db.WordProgress
+            .Where(p => p.UserId == userId && wordIds.Contains(p.WordId) && p.IsFinalCompleted)
+            .Select(p => p.WordId)
+            .ToListAsync();
+        var finalCompleted = finalCompletedList.ToHashSet();
+
+        var words = set.Words
+            .Select(w => new WordDto(w.Id, w.Term, w.Definition, w.Example, w.Position, finalCompleted.Contains(w.Id)))
+            .ToList();
         var authorName = isOwner ? null : (set.Owner.Name ?? set.Owner.Email);
 
         return Ok(new SetDetailDto(

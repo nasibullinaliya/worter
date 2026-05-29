@@ -35,12 +35,16 @@ public class ProgressController(AppDbContext db) : ControllerBase
 
         var knownCount = resultMap.Count(r => r.Value == 0);
 
-        // Upsert WordProgress only for words that were tested
+        // Load ALL existing WordProgress for this set (needed for IsFinalCompleted check)
         var existing = await db.WordProgress
-            .Where(p => p.UserId == userId && resultMap.Keys.Contains(p.WordId))
+            .Where(p => p.UserId == userId && wordIds.Contains(p.WordId))
             .ToDictionaryAsync(p => p.WordId);
 
         var now = DateTime.UtcNow;
+
+        // Track newly created WordProgress records so we can set IsFinalCompleted on them
+        var newlyCreated = new Dictionary<Guid, WordProgress>();
+
         foreach (var (wordId, errorCount) in resultMap)
         {
             var isKnown = errorCount == 0;
@@ -52,7 +56,7 @@ public class ProgressController(AppDbContext db) : ControllerBase
             }
             else
             {
-                db.WordProgress.Add(new WordProgress
+                var newWp = new WordProgress
                 {
                     Id = Guid.NewGuid(),
                     UserId = userId,
@@ -60,7 +64,9 @@ public class ProgressController(AppDbContext db) : ControllerBase
                     KnownCount = isKnown ? 1 : 0,
                     UnknownCount = isKnown ? 0 : errorCount,
                     LastSeenAt = now,
-                });
+                };
+                db.WordProgress.Add(newWp);
+                newlyCreated[wordId] = newWp;
             }
         }
 
@@ -80,9 +86,42 @@ public class ProgressController(AppDbContext db) : ControllerBase
             // Grace period exceeded → restart the SRS cycle from scratch
             ReviewScheduler.Restart(setProgress, knownCount, wordIds.Count);
         }
+        else if (setProgress.ReviewStage == ReviewScheduler.FinalStage && req.IsFinalStage)
+        {
+            // ── Final Stage word-by-word completion ───────────────────────────────
+            // Mark correctly-answered words as IsFinalCompleted
+            foreach (var (wordId, errorCount) in resultMap)
+            {
+                if (errorCount != 0) continue;
+                if (existing.TryGetValue(wordId, out var wp))
+                    wp.IsFinalCompleted = true;
+                else if (newlyCreated.TryGetValue(wordId, out var newWp))
+                    newWp.IsFinalCompleted = true;
+            }
+
+            // Count all completed words across existing sessions + this session
+            var completedInExisting = existing.Values.Count(wp => wp.IsFinalCompleted); // includes just-updated
+            var completedNewlyCreated = newlyCreated.Values.Count(wp => wp.IsFinalCompleted);
+            var allCompleted = (completedInExisting + completedNewlyCreated) == wordIds.Count;
+
+            if (allCompleted)
+            {
+                // All words done → advance stage to 6 (complete)
+                ReviewScheduler.RecordReview(setProgress, wordIds.Count, wordIds.Count);
+            }
+            else
+            {
+                // Partial progress → stay at stage 5, schedule for tomorrow
+                setProgress.LastStudiedAt = now;
+                setProgress.KnownCount = knownCount;
+                if (!setProgress.NextReviewAt.HasValue || setProgress.NextReviewAt.Value.Date <= now.Date)
+                    setProgress.NextReviewAt = now.Date.AddDays(1);
+                isFinalStageFailed = true;
+            }
+        }
         else
         {
-            // RecordReview returns false if the stage was NOT advanced (not due yet, or final stage failed)
+            // RecordReview returns false if the stage was NOT advanced (not due yet)
             bool advanced = ReviewScheduler.RecordReview(setProgress, knownCount, wordIds.Count);
             isFinalStageFailed = !advanced
                 && stageBefore == ReviewScheduler.FinalStage

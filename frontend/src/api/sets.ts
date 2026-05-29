@@ -6,6 +6,7 @@ export interface WordDto {
   definition: string
   example: string | null
   position: number
+  isFinalCompleted: boolean
 }
 
 export interface SetProgressSummary {

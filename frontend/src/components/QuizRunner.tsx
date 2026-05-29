@@ -259,16 +259,26 @@ export function QuizRunner({
           })}
         </div>
 
-        {/* Hint + retry */}
+        {/* Hint + buttons */}
         <p className="mb-6 text-center text-sm text-amber-700 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
           {t('test.finalStageFailedHint')}
         </p>
-        <button
-          onClick={handleRetake}
-          className="w-full rounded-lg bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
-        >
-          {t('test.retake')}
-        </button>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          {wrongWords.length > 0 && (
+            <button
+              onClick={() => setStudyingMistakes(true)}
+              className="flex-1 rounded-lg bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+            >
+              {t('quiz.studyMistakes')} ({wrongWords.length})
+            </button>
+          )}
+          <button
+            onClick={handleRetake}
+            className="flex-1 rounded-lg border border-gray-300 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            {t('test.retake')}
+          </button>
+        </div>
       </div>
     )
   }
