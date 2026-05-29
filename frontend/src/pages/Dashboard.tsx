@@ -316,9 +316,12 @@ export default function Dashboard() {
   const inProgressWords = sets
     .filter(s => s.progress && s.progress.reviewStage > 0 && s.progress.reviewStage <= FINAL_STAGE)
     .reduce((sum, s) => sum + s.wordCount, 0)
-  const learnedWords = sets
-    .filter(s => s.progress && s.progress.reviewStage > FINAL_STAGE)
-    .reduce((sum, s) => sum + s.wordCount, 0)
+  const learnedWords = sets.reduce((sum, s) => {
+    if (!s.progress) return sum
+    if (s.progress.reviewStage > FINAL_STAGE) return sum + s.wordCount
+    if (s.progress.reviewStage === FINAL_STAGE) return sum + s.progress.finalCompletedCount
+    return sum
+  }, 0)
 
   return (
     <Layout reminderCount={reminders.length}>
