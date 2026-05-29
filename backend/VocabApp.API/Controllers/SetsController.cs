@@ -5,6 +5,7 @@ using VocabApp.API.Data;
 using VocabApp.API.DTOs;
 using VocabApp.API.Extensions;
 using VocabApp.API.Models;
+using VocabApp.API.Services;
 
 namespace VocabApp.API.Controllers;
 
@@ -101,6 +102,22 @@ public class SetsController(AppDbContext db) : ControllerBase
             .Select(p => p.WordId)
             .ToListAsync();
         var finalCompleted = finalCompletedList.ToHashSet();
+
+        // Auto-reconcile: if all words are IsFinalCompleted but SetProgress is still at stage 5,
+        // advance to stage 6 (can happen if a previous fix was deployed mid-session)
+        if (wordIds.Count > 0 && finalCompleted.Count == wordIds.Count)
+        {
+            var setProgress = await db.SetProgress
+                .FirstOrDefaultAsync(p => p.UserId == userId && p.SetId == id);
+            if (setProgress != null && setProgress.ReviewStage == ReviewScheduler.FinalStage)
+            {
+                setProgress.ReviewStage = ReviewScheduler.FinalStage + 1;
+                setProgress.NextReviewAt = null;
+                setProgress.FinalCompletedCount = wordIds.Count;
+                setProgress.KnownCount = wordIds.Count;
+                await db.SaveChangesAsync();
+            }
+        }
 
         var words = set.Words
             .Select(w => new WordDto(w.Id, w.Term, w.Definition, w.Example, w.Position, finalCompleted.Contains(w.Id)))
