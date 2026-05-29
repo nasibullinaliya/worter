@@ -378,10 +378,14 @@ export default function SetDetail() {
                     )}
                   </div>
                   <span className="w-1/2 text-sm text-gray-500">{word.definition}</span>
-                  {showFinalStatus && word.isFinalCompleted && (
-                    <svg className="ml-auto h-4 w-4 shrink-0 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
+                  {showFinalStatus && (
+                    <span className="w-5 shrink-0 flex items-center justify-center">
+                      {word.isFinalCompleted && (
+                        <svg className="h-4 w-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </span>
                   )}
                 </div>
               )
