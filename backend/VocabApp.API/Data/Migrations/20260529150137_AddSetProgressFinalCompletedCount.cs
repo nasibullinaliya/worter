@@ -16,6 +16,20 @@ namespace VocabApp.API.Data.Migrations
                 type: "integer",
                 nullable: false,
                 defaultValue: 0);
+
+            // Backfill: compute FinalCompletedCount from existing WordProgress data
+            migrationBuilder.Sql(@"
+                UPDATE ""SetProgress"" sp
+                SET ""FinalCompletedCount"" = (
+                    SELECT COUNT(*)
+                    FROM ""WordProgress"" wp
+                    INNER JOIN ""Words"" w ON wp.""WordId"" = w.""Id""
+                    WHERE wp.""UserId"" = sp.""UserId""
+                      AND w.""SetId"" = sp.""SetId""
+                      AND wp.""IsFinalCompleted"" = true
+                )
+                WHERE sp.""ReviewStage"" >= 5;
+            ");
         }
 
         /// <inheritdoc />
