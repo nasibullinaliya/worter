@@ -210,27 +210,62 @@ export function QuizRunner({
 
   // ── Final stage failed ────────────────────────────────────────────────────────
   if (screen === 'failed') {
+    const wrongResults = results.filter((r) => !r.correct)
     return (
-      <div className="mx-auto max-w-md py-10 text-center">
-        <div className="mb-6 flex justify-center">
-          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
-            <svg className="h-8 w-8 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </span>
+      <div className="mx-auto max-w-2xl py-10">
+        {/* Header */}
+        <div className="mb-6 text-center">
+          <div className="mb-4 flex justify-center">
+            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
+              <svg className="h-8 w-8 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </span>
+          </div>
+          <h2 className="mb-1 text-2xl font-bold text-gray-900">{t('test.finalStageFailed')}</h2>
+          <p className="text-gray-500">
+            {t('test.correctlyWritten')}{' '}
+            <strong className="text-amber-600">{correctCount}</strong> {t('common.outOf')}{' '}
+            {quizWords.length}
+          </p>
         </div>
-        <h2 className="mb-2 text-2xl font-bold text-gray-900">{t('test.finalStageFailed')}</h2>
-        <p className="mb-2 text-gray-500">
-          {t('test.correctlyWritten')}{' '}
-          <strong className="text-amber-600">{correctCount}</strong> {t('common.outOf')}{' '}
-          {quizWords.length}
-        </p>
-        <p className="mb-8 text-sm text-amber-700 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+
+        {/* Mistakes table */}
+        <div className="mb-6 overflow-hidden rounded-xl border bg-white shadow-sm">
+          <div className="grid grid-cols-[1fr_1fr_24px] border-b bg-gray-50 px-5 py-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+            <span>{t('test.definition')}</span>
+            <span>{t('quiz.yourAnswer')}</span>
+            <span />
+          </div>
+          {wrongResults.map(({ word, userAnswer, correct }, i) => {
+            const question = getQuestion(word, direction)
+            const correctAnswer = getAnswer(word, direction)
+            const isLast = i === wrongResults.length - 1
+            return (
+              <div
+                key={word.wordId}
+                className={`grid grid-cols-[1fr_1fr_24px] gap-4 px-5 py-3 bg-red-50 ${!isLast ? 'border-b' : ''}`}
+              >
+                <span className="self-start text-sm text-gray-800">{question}</span>
+                <div className="self-start">
+                  <span className="block text-sm font-medium text-red-600 line-through">
+                    {userAnswer || <span className="italic text-gray-400">—</span>}
+                  </span>
+                  <span className="block text-sm text-gray-700">{correctAnswer}</span>
+                </div>
+                <span className="self-start text-base text-red-500">✗</span>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Hint + retry */}
+        <p className="mb-6 text-center text-sm text-amber-700 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
           {t('test.finalStageFailedHint')}
         </p>
         <button
           onClick={handleRetake}
-          className="rounded-lg bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-5 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+          className="w-full rounded-lg bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
         >
           {t('test.retake')}
         </button>
