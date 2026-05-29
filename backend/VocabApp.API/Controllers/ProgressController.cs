@@ -109,8 +109,13 @@ public class ProgressController(AppDbContext db) : ControllerBase
 
             if (allCompleted)
             {
-                // All words done → advance stage to 6 (complete)
-                ReviewScheduler.RecordReview(setProgress, wordIds.Count, wordIds.Count);
+                // All words done → force-complete to stage 6 regardless of NextReviewAt
+                setProgress.ReviewStage = ReviewScheduler.FinalStage + 1;
+                setProgress.NextReviewAt = null;
+                setProgress.LastStudiedAt = now;
+                setProgress.KnownCount = wordIds.Count;
+                setProgress.TotalWords = wordIds.Count;
+                setProgress.FinalCompletedCount = wordIds.Count;
             }
             else
             {
