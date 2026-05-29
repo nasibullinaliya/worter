@@ -237,7 +237,7 @@ export function QuizRunner({
             <span>{t('quiz.yourAnswer')}</span>
             <span />
           </div>
-          {wrongResults.map(({ word, userAnswer, correct }, i) => {
+          {wrongResults.map(({ word, userAnswer }, i) => {
             const question = getQuestion(word, direction)
             const correctAnswer = getAnswer(word, direction)
             const isLast = i === wrongResults.length - 1
