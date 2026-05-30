@@ -16,6 +16,7 @@ public class DictionaryController(AppDbContext db) : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetDictionary(
         [FromQuery] string? search = null,
+        [FromQuery] string? filter = null,  // "completed" | "incomplete" | null = all
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
@@ -36,6 +37,18 @@ public class DictionaryController(AppDbContext db) : ControllerBase
             wordQuery = wordQuery.Where(w =>
                 w.Term.ToLower().Contains(s) ||
                 w.Definition.ToLower().Contains(s));
+        }
+
+        // Completion filter: requires joining WordProgress
+        if (filter == "completed")
+        {
+            wordQuery = wordQuery.Where(w =>
+                db.WordProgress.Any(p => p.UserId == userId && p.WordId == w.Id && p.IsFinalCompleted));
+        }
+        else if (filter == "incomplete")
+        {
+            wordQuery = wordQuery.Where(w =>
+                !db.WordProgress.Any(p => p.UserId == userId && p.WordId == w.Id && p.IsFinalCompleted));
         }
 
         var totalCount = await wordQuery.CountAsync();

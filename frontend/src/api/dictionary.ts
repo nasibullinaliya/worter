@@ -17,7 +17,14 @@ export interface DictionaryPageDto {
   pageSize: number
 }
 
-export const getDictionary = (params: { search?: string; page?: number; pageSize?: number }) =>
+export type DictionaryFilter = 'all' | 'completed' | 'incomplete'
+
+export const getDictionary = (params: { search?: string; filter?: DictionaryFilter; page?: number; pageSize?: number }) =>
   client
-    .get<DictionaryPageDto>('/api/dictionary', { params })
+    .get<DictionaryPageDto>('/api/dictionary', {
+      params: {
+        ...params,
+        filter: params.filter === 'all' ? undefined : params.filter,
+      },
+    })
     .then((r) => r.data)

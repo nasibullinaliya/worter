@@ -20,6 +20,9 @@ const T = {
     'dictionary.empty': 'Слова не найдены',
     'dictionary.noWords': 'Нет слов. Добавьте слова в свои наборы.',
     'dictionary.total': 'Всего слов',
+    'dictionary.filterAll': 'Все',
+    'dictionary.filterCompleted': 'Завершённые',
+    'dictionary.filterIncomplete': 'Незавершённые',
 
     // today
     'today.title': 'На сегодня',
@@ -289,6 +292,9 @@ const T = {
     'dictionary.empty': 'No words found',
     'dictionary.noWords': 'No words yet. Add words to your sets.',
     'dictionary.total': 'Total words',
+    'dictionary.filterAll': 'All',
+    'dictionary.filterCompleted': 'Completed',
+    'dictionary.filterIncomplete': 'Not completed',
 
     'today.title': "Today's Review",
     'today.empty': 'No sets due today',
@@ -548,6 +554,9 @@ const T = {
     'dictionary.empty': 'Keine Wörter gefunden',
     'dictionary.noWords': 'Noch keine Wörter. Fügen Sie Wörter zu Ihren Sets hinzu.',
     'dictionary.total': 'Wörter gesamt',
+    'dictionary.filterAll': 'Alle',
+    'dictionary.filterCompleted': 'Abgeschlossen',
+    'dictionary.filterIncomplete': 'Nicht abgeschlossen',
 
     'today.title': 'Heute fällig',
     'today.empty': 'Keine Sets zur Wiederholung',

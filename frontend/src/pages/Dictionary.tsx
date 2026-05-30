@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getDictionary, type DictionaryWordDto } from '../api/dictionary'
+import { getDictionary, type DictionaryFilter, type DictionaryWordDto } from '../api/dictionary'
 import { Layout } from '../components/Layout'
 import { useLang } from '../context/LangContext'
 
@@ -11,6 +11,7 @@ export default function Dictionary() {
 
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [filter, setFilter] = useState<DictionaryFilter>('all')
   const [page, setPage] = useState(1)
   const [items, setItems] = useState<DictionaryWordDto[]>([])
   const [totalCount, setTotalCount] = useState(0)
@@ -29,16 +30,19 @@ export default function Dictionary() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
   }, [search])
 
+  // Reset page when filter changes
+  useEffect(() => { setPage(1) }, [filter])
+
   // Fetch
   useEffect(() => {
     setLoading(true)
-    getDictionary({ search: debouncedSearch || undefined, page, pageSize: PAGE_SIZE })
+    getDictionary({ search: debouncedSearch || undefined, filter, page, pageSize: PAGE_SIZE })
       .then((data) => {
         setItems(data.items)
         setTotalCount(data.totalCount)
       })
       .finally(() => setLoading(false))
-  }, [debouncedSearch, page])
+  }, [debouncedSearch, filter, page])
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE))
 
@@ -88,6 +92,30 @@ export default function Dictionary() {
             ×
           </button>
         )}
+      </div>
+
+      {/* Filter pills */}
+      <div className="mb-4 flex gap-2">
+        {(['all', 'completed', 'incomplete'] as DictionaryFilter[]).map((f) => (
+          <button
+            key={f}
+            onClick={() => setFilter(f)}
+            className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-medium transition-colors ${
+              filter === f
+                ? 'border-violet-600 bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] text-white'
+                : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+            }`}
+          >
+            {f === 'completed' && (
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+            {f === 'all' && t('dictionary.filterAll')}
+            {f === 'completed' && t('dictionary.filterCompleted')}
+            {f === 'incomplete' && t('dictionary.filterIncomplete')}
+          </button>
+        ))}
       </div>
 
       {/* Table */}
