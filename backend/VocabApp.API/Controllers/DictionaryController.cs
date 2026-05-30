@@ -41,7 +41,7 @@ public class DictionaryController(AppDbContext db) : ControllerBase
         var totalCount = await wordQuery.CountAsync();
 
         var wordPage = await wordQuery
-            .OrderBy(w => w.Term)
+            .OrderBy(w => w.Term.ToLower())
             .ThenBy(w => w.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
