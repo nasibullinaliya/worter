@@ -110,6 +110,9 @@ export function Layout({ children, reminderCount }: Props) {
                     </span>
                   )}
                 </Link>
+                <Link to="/dictionary" className={navCls('/dictionary')}>
+                  {t('nav.dictionary')}
+                </Link>
               </nav>
             </div>
 
@@ -145,6 +148,9 @@ export function Layout({ children, reminderCount }: Props) {
                   {reminderCount > 9 ? '9+' : reminderCount}
                 </span>
               )}
+            </Link>
+            <Link to="/dictionary" className={navCls('/dictionary')}>
+              {t('nav.dictionary')}
             </Link>
           </nav>
         </div>

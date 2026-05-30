@@ -17,6 +17,7 @@ import QuizAll from './pages/QuizAll'
 import Today from './pages/Today'
 import Explore from './pages/Explore'
 import Plan from './pages/Plan'
+import Dictionary from './pages/Dictionary'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ''
 
@@ -49,6 +50,7 @@ export default function App() {
             <Route path="/today" element={<ProtectedRoute><Today /></ProtectedRoute>} />
             <Route path="/explore" element={<ProtectedRoute><Explore /></ProtectedRoute>} />
             <Route path="/plan" element={<ProtectedRoute><Plan /></ProtectedRoute>} />
+            <Route path="/dictionary" element={<ProtectedRoute><Dictionary /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </AuthProvider>
