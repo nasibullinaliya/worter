@@ -16,7 +16,7 @@ export default function Dictionary() {
   const [items, setItems] = useState<DictionaryWordDto[]>([])
   const [totalCount, setTotalCount] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [showSet, setShowSet] = useState(true)
+  const [showSet, setShowSet] = useState(false)
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
