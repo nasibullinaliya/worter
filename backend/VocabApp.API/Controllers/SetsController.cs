@@ -202,6 +202,48 @@ public class SetsController(AppDbContext db) : ControllerBase
         return Ok();
     }
 
+    // POST /api/sets/{id}/copy — create an independent editable copy of a public set
+    [HttpPost("{id:guid}/copy")]
+    public async Task<IActionResult> CopySet(Guid id)
+    {
+        var userId = User.GetUserId();
+
+        var original = await db.WordSets
+            .Include(s => s.Words.OrderBy(w => w.Position))
+            .FirstOrDefaultAsync(s => s.Id == id);
+
+        if (original == null) return NotFound();
+        if (!original.IsPublic && original.OwnerId != userId) return Forbid();
+
+        var now = DateTime.UtcNow;
+        var copy = new WordSet
+        {
+            Id = Guid.NewGuid(),
+            Title = original.Title,
+            Description = original.Description,
+            IsPublic = false,
+            Language = original.Language,
+            OwnerId = userId,
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+
+        db.WordSets.Add(copy);
+
+        db.Words.AddRange(original.Words.Select(w => new Word
+        {
+            Id = Guid.NewGuid(),
+            Term = w.Term,
+            Definition = w.Definition,
+            Example = w.Example,
+            Position = w.Position,
+            SetId = copy.Id,
+        }));
+
+        await db.SaveChangesAsync();
+        return Ok(new { id = copy.Id });
+    }
+
     // DELETE /api/sets/{id}/clone — убрать чужой набор из своих
     [HttpDelete("{id:guid}/clone")]
     public async Task<IActionResult> Uncollect(Guid id)

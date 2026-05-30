@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { getSet, deleteSet, cloneSet, uncloneSet, generateText, type SetDetailDto } from '../api/sets'
+import { getSet, deleteSet, cloneSet, uncloneSet, copySet, generateText, type SetDetailDto } from '../api/sets'
 import { getStudyHistory, getAllWords, getProgress, type SetStudyLogDto, type AllWordsItemDto, type SetProgressDto } from '../api/progress'
 import { Layout } from '../components/Layout'
 import { SpeakButton } from '../components/SpeakButton'
@@ -16,6 +16,7 @@ export default function SetDetail() {
   const [error, setError] = useState('')
   const [cloneStatus, setCloneStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [removing, setRemoving] = useState(false)
+  const [copying, setCopying] = useState(false)
   const [history, setHistory] = useState<SetStudyLogDto[] | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [historyLoading, setHistoryLoading] = useState(false)
@@ -60,6 +61,17 @@ export default function SetDetail() {
       } else {
         setCloneStatus('idle')
       }
+    }
+  }
+
+  const handleCopy = async () => {
+    if (!set) return
+    setCopying(true)
+    try {
+      const { id: newId } = await copySet(set.id)
+      navigate(`/sets/${newId}`)
+    } catch {
+      setCopying(false)
     }
   }
 
@@ -158,6 +170,15 @@ export default function SetDetail() {
               className="rounded-full border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
             >
               {removing ? '...' : t('set.removeFromMine')}
+            </button>
+          )}
+          {!set.isOwner && (
+            <button
+              onClick={handleCopy}
+              disabled={copying}
+              className="rounded-full border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            >
+              {copying ? t('set.copying') : t('set.copySet')}
             </button>
           )}
 

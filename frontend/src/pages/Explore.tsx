@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { exploreSearch, type ExploreItemDto } from '../api/explore'
-import { cloneSet } from '../api/sets'
+import { cloneSet, copySet } from '../api/sets'
 import { Layout } from '../components/Layout'
 import { useLang } from '../context/LangContext'
 
 export default function Explore() {
   const { t, wl } = useLang()
+  const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [items, setItems] = useState<ExploreItemDto[]>([])
   const [totalCount, setTotalCount] = useState(0)
@@ -14,6 +15,8 @@ export default function Explore() {
   const [loading, setLoading] = useState(false)
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [copyingId, setCopyingId] = useState<string | null>(null)
+  const [copiedIds, setCopiedIds] = useState<Set<string>>(new Set())
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const pageSize = 20
@@ -43,6 +46,17 @@ export default function Explore() {
   useEffect(() => {
     if (page > 1) doSearch(query, page)
   }, [page])
+
+  const handleCopy = async (id: string) => {
+    setCopyingId(id)
+    try {
+      const { id: newId } = await copySet(id)
+      setCopiedIds((prev) => new Set([...prev, id]))
+      navigate(`/sets/${newId}`)
+    } catch {
+      setCopyingId(null)
+    }
+  }
 
   const handleSave = async (id: string) => {
     setSavingId(id)
@@ -121,17 +135,26 @@ export default function Explore() {
                       {item.authorName} · {item.wordCount} {wl(item.wordCount)}
                     </p>
                   </div>
-                  <button
-                    onClick={() => handleSave(item.id)}
-                    disabled={isSaved || savingId === item.id}
-                    className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-                      isSaved
-                        ? 'bg-green-100 text-green-700 cursor-default'
-                        : 'bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] text-white hover:opacity-90 transition-opacity disabled:opacity-50'
-                    }`}
-                  >
-                    {isSaved ? t('explore.added') : savingId === item.id ? '...' : t('explore.add')}
-                  </button>
+                  <div className="flex shrink-0 gap-1.5">
+                    <button
+                      onClick={() => handleCopy(item.id)}
+                      disabled={!!copyingId || copiedIds.has(item.id)}
+                      className="rounded-full border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                    >
+                      {copiedIds.has(item.id) ? t('explore.copied') : copyingId === item.id ? '...' : t('explore.copy')}
+                    </button>
+                    <button
+                      onClick={() => handleSave(item.id)}
+                      disabled={isSaved || savingId === item.id}
+                      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                        isSaved
+                          ? 'bg-green-100 text-green-700 cursor-default'
+                          : 'bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] text-white hover:opacity-90 transition-opacity disabled:opacity-50'
+                      }`}
+                    >
+                      {isSaved ? t('explore.added') : savingId === item.id ? '...' : t('explore.add')}
+                    </button>
+                  </div>
                 </div>
               </div>
             )

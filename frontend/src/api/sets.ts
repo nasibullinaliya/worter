@@ -63,6 +63,9 @@ export const deleteSet = (id: string) =>
 export const cloneSet = (id: string) =>
   client.post(`/api/sets/${id}/clone`)
 
+export const copySet = (id: string) =>
+  client.post<{ id: string }>(`/api/sets/${id}/copy`).then((r) => r.data)
+
 export const uncloneSet = (id: string) =>
   client.delete(`/api/sets/${id}/clone`)
 
