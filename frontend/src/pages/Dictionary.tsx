@@ -142,7 +142,12 @@ export default function Dictionary() {
               key={word.wordId}
               className={`grid items-center gap-4 px-5 py-3 ${showSet ? 'grid-cols-[1fr_1fr_1fr_20px]' : 'grid-cols-[1fr_1fr_20px]'} ${i !== items.length - 1 ? 'border-b border-gray-50' : ''}`}
             >
-              <span className="text-sm font-medium text-gray-900">{word.term}</span>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-gray-900">{word.term}</span>
+                {word.example && (
+                  <span className="mt-0.5 text-xs italic text-gray-400">{word.example}</span>
+                )}
+              </div>
               <span className="text-sm text-gray-500">{word.definition}</span>
               {showSet && (
                 <Link
