@@ -427,7 +427,7 @@ export default function Dashboard() {
   }, 0)
 
   const completedSets = sets.filter(s => s.progress && s.progress.reviewStage > FINAL_STAGE)
-  const showPills = folders.length > 0 || completedSets.length > 0
+  const showPills = sets.length > 0
 
   const filteredSets = activeFolder === null
     ? sets
