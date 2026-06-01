@@ -426,8 +426,6 @@ export default function Dashboard() {
     return sum
   }, 0)
 
-  // Owned sets that can have folders
-  const ownedSets = sets.filter(s => s.isOwner)
   const completedSets = sets.filter(s => s.progress && s.progress.reviewStage > FINAL_STAGE)
   const showPills = folders.length > 0 || completedSets.length > 0
 
