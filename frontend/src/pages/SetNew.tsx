@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createSet, addWords } from '../api/sets'
+import { getFolders, type FolderDto } from '../api/folders'
 import { getAllWords, type AllWordsItemDto } from '../api/progress'
 import { parseImportText, analyzeImport } from '../utils/importParser'
 import { Layout } from '../components/Layout'
@@ -15,11 +16,14 @@ export default function SetNew() {
   const [language, setLanguage] = useState('de-DE')
   const [importText, setImportText] = useState('')
   const [separator, setSeparator] = useState('-')
+  const [folderId, setFolderId] = useState<string | null>(null)
+  const [folders, setFolders] = useState<FolderDto[]>([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const [allUserWords, setAllUserWords] = useState<AllWordsItemDto[]>([])
   useEffect(() => { getAllWords().then(setAllUserWords).catch(() => {}) }, [])
+  useEffect(() => { getFolders().then(setFolders).catch(() => {}) }, [])
 
   const parsedWords = useMemo(
     () => (importText.trim() ? parseImportText(importText, separator) : []),
@@ -47,7 +51,7 @@ export default function SetNew() {
 
     setLoading(true)
     try {
-      const set = await createSet({ title, description: description || undefined, isPublic, language })
+      const set = await createSet({ title, description: description || undefined, isPublic, language, folderId })
       if (words.length > 0) {
         await addWords(set.id, words)
       }
@@ -107,6 +111,22 @@ export default function SetNew() {
               <option value="it-IT">IT · Italiano</option>
             </select>
           </div>
+
+          {folders.length > 0 && (
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">{t('form.folder')}</label>
+              <select
+                value={folderId ?? ''}
+                onChange={(e) => setFolderId(e.target.value || null)}
+                className="rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+              >
+                <option value="">{t('form.noFolder')}</option>
+                {folders.map(f => (
+                  <option key={f.id} value={f.id}>{f.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="flex items-center gap-3">
             <button

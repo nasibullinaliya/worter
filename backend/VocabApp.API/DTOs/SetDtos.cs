@@ -6,14 +6,16 @@ public record CreateSetRequest(
     [Required, MaxLength(200)] string Title,
     [MaxLength(2000)] string? Description,
     bool IsPublic,
-    [MaxLength(10)] string? Language
+    [MaxLength(10)] string? Language,
+    Guid? FolderId = null
 );
 
 public record UpdateSetRequest(
     [Required, MaxLength(200)] string Title,
     [MaxLength(2000)] string? Description,
     bool IsPublic,
-    [MaxLength(10)] string? Language
+    [MaxLength(10)] string? Language,
+    Guid? FolderId = null
 );
 
 public record SetProgressSummary(
@@ -35,7 +37,9 @@ public record SetSummaryDto(
     DateTime UpdatedAt,
     SetProgressSummary? Progress,
     string Language = "de-DE",
-    string? AuthorName = null
+    string? AuthorName = null,
+    Guid? FolderId = null,
+    string? FolderName = null
 );
 
 public record SetDetailDto(
@@ -49,8 +53,14 @@ public record SetDetailDto(
     DateTime UpdatedAt,
     List<WordDto> Words,
     string Language = "de-DE",
-    string? AuthorName = null
+    string? AuthorName = null,
+    Guid? FolderId = null,
+    string? FolderName = null
 );
+
+public record FolderDto(Guid Id, string Name, int SetCount);
+public record CreateFolderRequest([Required, MaxLength(100)] string Name);
+public record UpdateFolderRequest([Required, MaxLength(100)] string Name);
 
 public record ExploreItemDto(
     Guid Id,

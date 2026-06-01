@@ -146,6 +146,22 @@ const T = {
     'form.warnInOtherSets': 'Уже есть в других наборах:',
     'form.swapWord': 'Поменять',
     'form.swapAll': 'Поменять все ⇄',
+    'form.folder': 'Папка',
+    'form.noFolder': 'Без папки',
+
+    // folders
+    'folder.all': 'Все',
+    'folder.noFolder': 'Без папки',
+    'folder.newFolder': '+ Новая папка',
+    'folder.createTitle': 'Новая папка',
+    'folder.renameTitle': 'Переименовать папку',
+    'folder.namePlaceholder': 'Название папки',
+    'folder.create': 'Создать',
+    'folder.rename': 'Сохранить',
+    'folder.deleteConfirm': 'Удалить папку? Наборы останутся.',
+    'folder.assignFolder': 'В папку',
+    'folder.removeFromFolder': 'Убрать из папки',
+    'folder.manage': 'Папки',
 
     // flashcards
     'fc.word': 'Слово',
@@ -415,6 +431,22 @@ const T = {
     'form.warnInOtherSets': 'Already in other sets:',
     'form.swapWord': 'Swap',
     'form.swapAll': 'Swap all ⇄',
+    'form.folder': 'Folder',
+    'form.noFolder': 'No folder',
+
+    // folders
+    'folder.all': 'All',
+    'folder.noFolder': 'No folder',
+    'folder.newFolder': '+ New folder',
+    'folder.createTitle': 'New folder',
+    'folder.renameTitle': 'Rename folder',
+    'folder.namePlaceholder': 'Folder name',
+    'folder.create': 'Create',
+    'folder.rename': 'Save',
+    'folder.deleteConfirm': 'Delete folder? Sets will remain.',
+    'folder.assignFolder': 'Move to folder',
+    'folder.removeFromFolder': 'Remove from folder',
+    'folder.manage': 'Folders',
 
     'fc.word': 'Word',
     'fc.translation': 'Translation',
@@ -681,6 +713,22 @@ const T = {
     'form.warnInOtherSets': 'Bereits in anderen Sets:',
     'form.swapWord': 'Tauschen',
     'form.swapAll': 'Alle tauschen ⇄',
+    'form.folder': 'Ordner',
+    'form.noFolder': 'Kein Ordner',
+
+    // folders
+    'folder.all': 'Alle',
+    'folder.noFolder': 'Kein Ordner',
+    'folder.newFolder': '+ Neuer Ordner',
+    'folder.createTitle': 'Neuer Ordner',
+    'folder.renameTitle': 'Ordner umbenennen',
+    'folder.namePlaceholder': 'Ordnername',
+    'folder.create': 'Erstellen',
+    'folder.rename': 'Speichern',
+    'folder.deleteConfirm': 'Ordner löschen? Sets bleiben erhalten.',
+    'folder.assignFolder': 'In Ordner',
+    'folder.removeFromFolder': 'Aus Ordner entfernen',
+    'folder.manage': 'Ordner',
 
     'fc.word': 'Wort',
     'fc.translation': 'Übersetzung',

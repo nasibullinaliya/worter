@@ -45,6 +45,9 @@ public class RemindersController(AppDbContext db) : ControllerBase
                      && p.NextReviewAt.Value.Date <= today
                      && p.LastStudiedAt.Date < today)
             .Include(p => p.Set)
+            // Only show sets the user still owns or has saved
+            .Where(p => p.Set.OwnerId == userId ||
+                        db.UserSets.Any(us => us.UserId == userId && us.SetId == p.SetId))
             .OrderBy(p => p.NextReviewAt)
             .Select(p => new ReminderDto(
                 p.SetId,

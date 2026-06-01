@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using VocabApp.API.Data;
@@ -11,9 +12,11 @@ using VocabApp.API.Data;
 namespace VocabApp.API.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260601130119_AddFolders")]
+    partial class AddFolders
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -198,12 +201,7 @@ namespace VocabApp.API.Data.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasDefaultValueSql("now()");
 
-                    b.Property<Guid?>("FolderId")
-                        .HasColumnType("uuid");
-
                     b.HasKey("UserId", "SetId");
-
-                    b.HasIndex("FolderId");
 
                     b.HasIndex("SetId");
 
@@ -385,11 +383,6 @@ namespace VocabApp.API.Data.Migrations
 
             modelBuilder.Entity("VocabApp.API.Models.UserSet", b =>
                 {
-                    b.HasOne("VocabApp.API.Models.Folder", "Folder")
-                        .WithMany()
-                        .HasForeignKey("FolderId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("VocabApp.API.Models.WordSet", "Set")
                         .WithMany("SavedBy")
                         .HasForeignKey("SetId")
@@ -401,8 +394,6 @@ namespace VocabApp.API.Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Folder");
 
                     b.Navigation("Set");
 

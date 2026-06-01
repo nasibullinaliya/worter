@@ -13,4 +13,5 @@ public class User
     public ICollection<UserSet> SavedSets { get; set; } = [];
     public ICollection<SetProgress> Progress { get; set; } = [];
     public ICollection<WordProgress> WordProgress { get; set; } = [];
+    public ICollection<Folder> Folders { get; set; } = [];
 }

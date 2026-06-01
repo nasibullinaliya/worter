@@ -13,6 +13,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<WordProgress> WordProgress => Set<WordProgress>();
     public DbSet<DailyProgress> DailyProgress => Set<DailyProgress>();
     public DbSet<SetStudyLog> SetStudyLogs => Set<SetStudyLog>();
+    public DbSet<Folder> Folders => Set<Folder>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -33,6 +34,20 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(s => s.Owner)
              .WithMany(u => u.OwnedSets)
              .HasForeignKey(s => s.OwnerId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(s => s.Folder)
+             .WithMany(f => f.Sets)
+             .HasForeignKey(s => s.FolderId)
+             .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        b.Entity<Folder>(e =>
+        {
+            e.HasKey(f => f.Id);
+            e.Property(f => f.CreatedAt).HasDefaultValueSql("now()");
+            e.HasOne(f => f.User)
+             .WithMany(u => u.Folders)
+             .HasForeignKey(f => f.UserId)
              .OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -57,6 +72,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
              .WithMany(s => s.SavedBy)
              .HasForeignKey(us => us.SetId)
              .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(us => us.Folder)
+             .WithMany()
+             .HasForeignKey(us => us.FolderId)
+             .OnDelete(DeleteBehavior.SetNull);
         });
 
         b.Entity<SetProgress>(e =>

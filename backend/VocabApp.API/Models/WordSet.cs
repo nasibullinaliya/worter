@@ -13,6 +13,9 @@ public class WordSet
     public Guid OwnerId { get; set; }
     public User Owner { get; set; } = null!;
 
+    public Guid? FolderId { get; set; }
+    public Folder? Folder { get; set; }
+
     public ICollection<Word> Words { get; set; } = [];
     public ICollection<UserSet> SavedBy { get; set; } = [];
     public ICollection<SetProgress> Progress { get; set; } = [];

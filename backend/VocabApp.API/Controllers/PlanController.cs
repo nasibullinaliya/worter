@@ -85,7 +85,11 @@ public class PlanController(AppDbContext db) : ControllerBase
             .Join(db.WordSets,
                   p => p.SetId,
                   s => s.Id,
-                  (p, s) => new { p.NextReviewAt, p.ReviewStage, SetId = s.Id, s.Title, p.TotalWords })
+                  (p, s) => new { p.NextReviewAt, p.ReviewStage, SetId = s.Id, s.Title, s.OwnerId, p.TotalWords })
+            // Only include sets the user still owns or has explicitly saved
+            .Where(x => x.OwnerId == userId ||
+                        db.UserSets.Any(us => us.UserId == userId && us.SetId == x.SetId))
+            .Select(x => new { x.NextReviewAt, x.ReviewStage, x.SetId, x.Title, x.TotalWords })
             .ToListAsync();
 
         // Build a lookup: date → list of items

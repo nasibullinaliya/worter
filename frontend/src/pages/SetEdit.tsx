@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getSet, updateSet, addWords, updateWord, deleteWord, swapAllWords, type SetDetailDto, type WordDto } from '../api/sets'
+import { getFolders, type FolderDto } from '../api/folders'
 import { getAllWords, type AllWordsItemDto } from '../api/progress'
 import { parseImportText, analyzeImport } from '../utils/importParser'
 import { Layout } from '../components/Layout'
@@ -18,6 +19,8 @@ export default function SetEdit() {
   const [description, setDescription] = useState('')
   const [isPublic, setIsPublic] = useState(false)
   const [language, setLanguage] = useState('de-DE')
+  const [folderId, setFolderId] = useState<string | null>(null)
+  const [folders, setFolders] = useState<FolderDto[]>([])
   const [saving, setSaving] = useState(false)
 
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -37,6 +40,7 @@ export default function SetEdit() {
 
   const [allUserWords, setAllUserWords] = useState<AllWordsItemDto[]>([])
   useEffect(() => { getAllWords().then(setAllUserWords).catch(() => {}) }, [])
+  useEffect(() => { getFolders().then(setFolders).catch(() => {}) }, [])
 
   const [error, setError] = useState('')
 
@@ -53,6 +57,7 @@ export default function SetEdit() {
         setDescription(s.description ?? '')
         setIsPublic(s.isPublic)
         setLanguage(s.language ?? 'de-DE')
+        setFolderId(s.folderId ?? null)
       })
       .catch(() => setError(t('form.notFoundError')))
       .finally(() => setLoading(false))
@@ -62,7 +67,7 @@ export default function SetEdit() {
     if (!set || !title.trim()) return
     setSaving(true)
     try {
-      await updateSet(set.id, { title: title.trim(), description: description.trim() || undefined, isPublic, language })
+      await updateSet(set.id, { title: title.trim(), description: description.trim() || undefined, isPublic, language, folderId })
       setSet((prev) =>
         prev
           ? { ...prev, title: title.trim(), description: description.trim() || null, isPublic, language }
@@ -244,6 +249,21 @@ export default function SetEdit() {
                 <option value="it-IT">IT · Italiano</option>
               </select>
             </div>
+            {folders.length > 0 && (
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">{t('form.folder')}</label>
+                <select
+                  value={folderId ?? ''}
+                  onChange={(e) => setFolderId(e.target.value || null)}
+                  className="rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                >
+                  <option value="">{t('form.noFolder')}</option>
+                  {folders.map(f => (
+                    <option key={f.id} value={f.id}>{f.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="flex items-center gap-3">
               <button
                 type="button"

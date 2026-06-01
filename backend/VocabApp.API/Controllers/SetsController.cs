@@ -34,16 +34,16 @@ public class SetsController(AppDbContext db) : ControllerBase
 
         var owned = await db.WordSets
             .Where(s => s.OwnerId == userId)
-            .Select(s => new { s.Id, s.Title, s.Description, s.IsPublic, s.Language, s.CreatedAt, s.UpdatedAt, WordCount = s.Words.Count })
+            .Select(s => new { s.Id, s.Title, s.Description, s.IsPublic, s.Language, s.CreatedAt, s.UpdatedAt, WordCount = s.Words.Count, s.FolderId, FolderName = s.Folder != null ? s.Folder.Name : (string?)null })
             .ToListAsync();
 
         var saved = await db.UserSets
             .Where(us => us.UserId == userId)
-            .Select(us => new { us.Set.Id, us.Set.Title, us.Set.Description, us.Set.IsPublic, us.Set.Language, us.Set.CreatedAt, us.Set.UpdatedAt, WordCount = us.Set.Words.Count, AuthorName = us.Set.Owner.Name ?? us.Set.Owner.Email })
+            .Select(us => new { us.Set.Id, us.Set.Title, us.Set.Description, us.Set.IsPublic, us.Set.Language, us.Set.CreatedAt, us.Set.UpdatedAt, WordCount = us.Set.Words.Count, AuthorName = us.Set.Owner.Name ?? us.Set.Owner.Email, FolderId = us.FolderId, FolderName = us.Folder != null ? us.Folder.Name : (string?)null })
             .ToListAsync();
 
-        var result = owned.Select(s => new SetSummaryDto(s.Id, s.Title, s.Description, s.IsPublic, true, s.WordCount, s.CreatedAt, s.UpdatedAt, GetProgress(s.Id), s.Language))
-            .Concat(saved.Select(s => new SetSummaryDto(s.Id, s.Title, s.Description, s.IsPublic, false, s.WordCount, s.CreatedAt, s.UpdatedAt, GetProgress(s.Id), s.Language, s.AuthorName)))
+        var result = owned.Select(s => new SetSummaryDto(s.Id, s.Title, s.Description, s.IsPublic, true, s.WordCount, s.CreatedAt, s.UpdatedAt, GetProgress(s.Id), s.Language, null, s.FolderId, s.FolderName))
+            .Concat(saved.Select(s => new SetSummaryDto(s.Id, s.Title, s.Description, s.IsPublic, false, s.WordCount, s.CreatedAt, s.UpdatedAt, GetProgress(s.Id), s.Language, s.AuthorName, s.FolderId, s.FolderName)))
             .OrderByDescending(s => s.CreatedAt);
 
         return Ok(result);
@@ -57,6 +57,16 @@ public class SetsController(AppDbContext db) : ControllerBase
         var now = DateTime.UtcNow;
 
         var lang = ValidLangs.Contains(req.Language ?? "") ? req.Language! : "de-DE";
+
+        // Validate FolderId belongs to user
+        Guid? folderId = null;
+        string? folderName = null;
+        if (req.FolderId.HasValue)
+        {
+            var folder = await db.Folders.FirstOrDefaultAsync(f => f.Id == req.FolderId.Value && f.UserId == userId);
+            if (folder != null) { folderId = folder.Id; folderName = folder.Name; }
+        }
+
         var set = new WordSet
         {
             Id = Guid.NewGuid(),
@@ -65,6 +75,7 @@ public class SetsController(AppDbContext db) : ControllerBase
             IsPublic = req.IsPublic,
             Language = lang,
             OwnerId = userId,
+            FolderId = folderId,
             CreatedAt = now,
             UpdatedAt = now,
         };
@@ -73,7 +84,7 @@ public class SetsController(AppDbContext db) : ControllerBase
         await db.SaveChangesAsync();
 
         return CreatedAtAction(nameof(GetById), new { id = set.Id },
-            new SetSummaryDto(set.Id, set.Title, set.Description, set.IsPublic, true, 0, set.CreatedAt, set.UpdatedAt, null, set.Language));
+            new SetSummaryDto(set.Id, set.Title, set.Description, set.IsPublic, true, 0, set.CreatedAt, set.UpdatedAt, null, set.Language, null, folderId, folderName));
     }
 
     // GET /api/sets/{id}
@@ -85,6 +96,7 @@ public class SetsController(AppDbContext db) : ControllerBase
         var set = await db.WordSets
             .Include(s => s.Words.OrderBy(w => w.Position))
             .Include(s => s.Owner)
+            .Include(s => s.Folder)
             .FirstOrDefaultAsync(s => s.Id == id);
 
         if (set == null) return NotFound();
@@ -126,7 +138,8 @@ public class SetsController(AppDbContext db) : ControllerBase
 
         return Ok(new SetDetailDto(
             set.Id, set.Title, set.Description, set.IsPublic, isOwner, isSaved,
-            set.CreatedAt, set.UpdatedAt, words, set.Language, authorName));
+            set.CreatedAt, set.UpdatedAt, words, set.Language, authorName,
+            isOwner ? set.FolderId : null, isOwner ? set.Folder?.Name : null));
     }
 
     // PUT /api/sets/{id}
@@ -144,6 +157,17 @@ public class SetsController(AppDbContext db) : ControllerBase
         set.IsPublic = req.IsPublic;
         set.Language = ValidLangs.Contains(req.Language ?? "") ? req.Language! : set.Language;
         set.UpdatedAt = DateTime.UtcNow;
+
+        // Update FolderId if provided (null explicitly removes from folder)
+        if (req.FolderId.HasValue)
+        {
+            var folder = await db.Folders.FirstOrDefaultAsync(f => f.Id == req.FolderId.Value && f.UserId == userId);
+            set.FolderId = folder != null ? folder.Id : set.FolderId;
+        }
+        else
+        {
+            set.FolderId = null;
+        }
 
         await db.SaveChangesAsync();
         return NoContent();
