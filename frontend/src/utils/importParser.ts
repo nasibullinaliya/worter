@@ -1,27 +1,42 @@
 export function parseImportText(
   text: string,
   separator = '-',
-): { term: string; definition: string }[] {
+): { term: string; definition: string; example?: string }[] {
   const sep = separator.trim() || '-'
   return text
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean)
     .flatMap((line) => {
+      let term: string
+      let definition: string
+      let example: string | undefined
+
       // Tab is always recognised as a separator regardless of the setting
       const tabIdx = line.indexOf('\t')
       if (tabIdx !== -1) {
-        return [{ term: line.slice(0, tabIdx).trim(), definition: line.slice(tabIdx + 1).trim() }]
+        const parts = line.split('\t').map((s) => s.trim())
+        term = parts[0] ?? ''
+        definition = parts[1] ?? ''
+        example = parts[2] || undefined
+      } else {
+        // User-defined separator — split on first occurrence for term,
+        // then on second occurrence (within the rest) for definition / example
+        const firstIdx = line.indexOf(sep)
+        if (firstIdx === -1) return []
+        term = line.slice(0, firstIdx).trim()
+        const rest = line.slice(firstIdx + sep.length)
+        const secondIdx = rest.indexOf(sep)
+        if (secondIdx !== -1) {
+          definition = rest.slice(0, secondIdx).trim()
+          example = rest.slice(secondIdx + sep.length).trim() || undefined
+        } else {
+          definition = rest.trim()
+          example = undefined
+        }
       }
-      // User-defined separator
-      const sepIdx = line.indexOf(sep)
-      if (sepIdx !== -1) {
-        return [{
-          term: line.slice(0, sepIdx).trim(),
-          definition: line.slice(sepIdx + sep.length).trim(),
-        }]
-      }
-      return []
+
+      return [{ term, definition, example }]
     })
     .filter((p) => p.term && p.definition)
 }
@@ -36,7 +51,7 @@ export interface ImportWarnings {
 }
 
 export function analyzeImport(
-  parsed: { term: string; definition: string }[],
+  parsed: { term: string; definition: string; example?: string }[],
   allUserWords: { term: string; setId: string; setTitle: string }[],
   currentSetId?: string,
 ): ImportWarnings {
