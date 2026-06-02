@@ -304,17 +304,16 @@ function FolderDropdown({
     <div ref={ref} className="relative" onClick={e => e.preventDefault()}>
       <button
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen(v => !v) }}
-        className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors ${
+        className={`flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs transition-colors ${
           set.folderId
             ? 'border-violet-200 bg-violet-50 text-violet-600'
             : 'border-gray-200 text-gray-400 hover:bg-gray-50'
         }`}
-        title={t('folder.assignFolder')}
+        title={set.folderName ?? t('folder.assignFolder')}
       >
-        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
         </svg>
-        <span className="max-w-[80px] truncate">{set.folderName ?? t('folder.assignFolder')}</span>
       </button>
       {open && (
         <div className="absolute left-0 top-full z-20 mt-1 min-w-[160px] rounded-xl border border-gray-100 bg-white py-1 shadow-lg">
