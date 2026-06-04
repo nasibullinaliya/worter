@@ -352,7 +352,10 @@ export default function SetDetail() {
           if (!crossMap.get(key)!.includes(w.setTitle)) crossMap.get(key)!.push(w.setTitle)
         }
 
-        const showFinalStatus = progress != null && progress.reviewStage >= FINAL_STAGE
+        // Show per-word completion only after at least one final-stage attempt
+        const showFinalStatus = progress != null &&
+          (progress.reviewStage > FINAL_STAGE ||
+           (progress.reviewStage === FINAL_STAGE && progress.finalCompletedCount > 0))
 
         return set.words.length === 0 ? null : (
           <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">

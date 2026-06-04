@@ -9,6 +9,7 @@ export interface SetProgressDto {
   knownCount: number
   totalWords: number
   isFinalStageFailed: boolean
+  finalCompletedCount: number
 }
 
 export interface WordProgressDto {

@@ -85,12 +85,23 @@ public class PlanController(AppDbContext db) : ControllerBase
             .Join(db.WordSets,
                   p => p.SetId,
                   s => s.Id,
-                  (p, s) => new { p.NextReviewAt, p.ReviewStage, SetId = s.Id, s.Title, s.OwnerId, p.TotalWords })
+                  (p, s) => new { p.NextReviewAt, p.ReviewStage, SetId = s.Id, s.Title, s.OwnerId, p.TotalWords, p.FinalCompletedCount })
             // Only include sets the user still owns or has explicitly saved
             .Where(x => x.OwnerId == userId ||
                         db.UserSets.Any(us => us.UserId == userId && us.SetId == x.SetId))
-            .Select(x => new { x.NextReviewAt, x.ReviewStage, x.SetId, x.Title, x.TotalWords })
+            .Select(x => new { x.NextReviewAt, x.ReviewStage, x.SetId, x.Title, x.TotalWords, x.FinalCompletedCount })
             .ToListAsync();
+
+        // For stage-5 sets show only the remaining (not yet completed) words
+        var records2 = records.Select(x => new {
+            x.NextReviewAt,
+            x.ReviewStage,
+            x.SetId,
+            x.Title,
+            TotalWords = x.ReviewStage == ReviewScheduler.FinalStage
+                ? Math.Max(0, x.TotalWords - x.FinalCompletedCount)
+                : x.TotalWords
+        }).ToList();
 
         // Build a lookup: date → list of items
         var grouped = new Dictionary<DateOnly, List<PlanSetItemDto>>();
@@ -103,7 +114,7 @@ public class PlanController(AppDbContext db) : ControllerBase
             list.Add(item);
         }
 
-        foreach (var r in records)
+        foreach (var r in records2)
         {
             var scheduledDate = DateOnly.FromDateTime(r.NextReviewAt!.Value);
             var isFinalStage = r.ReviewStage == ReviewScheduler.FinalStage;

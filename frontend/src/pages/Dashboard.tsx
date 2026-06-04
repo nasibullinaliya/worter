@@ -683,7 +683,7 @@ function SetCard({
 
       {/* Progress */}
       {p ? (
-        p.reviewStage >= FINAL_STAGE
+        (p.reviewStage === FINAL_STAGE && p.finalCompletedCount > 0) || p.reviewStage > FINAL_STAGE
           ? <ProgressBar known={p.finalCompletedCount} total={set.wordCount} className="mb-3" />
           : <ProgressBar known={p.knownCount} total={p.totalWords} className="mb-3" />
       ) : (

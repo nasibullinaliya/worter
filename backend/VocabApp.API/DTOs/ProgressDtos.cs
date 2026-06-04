@@ -19,7 +19,8 @@ public record SetProgressDto(
     int ReviewStage,
     int KnownCount,
     int TotalWords,
-    bool IsFinalStageFailed = false  // true when stage-5 test was attempted but not passed perfectly
+    bool IsFinalStageFailed = false,
+    int FinalCompletedCount = 0
 );
 
 public record WordProgressDto(

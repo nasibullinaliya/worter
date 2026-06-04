@@ -398,5 +398,5 @@ public class ProgressController(AppDbContext db) : ControllerBase
     }
 
     private static SetProgressDto ToDto(SetProgress p, bool isFinalStageFailed = false) =>
-        new(p.SetId, p.FirstStudiedAt, p.LastStudiedAt, p.NextReviewAt, p.ReviewStage, p.KnownCount, p.TotalWords, isFinalStageFailed);
+        new(p.SetId, p.FirstStudiedAt, p.LastStudiedAt, p.NextReviewAt, p.ReviewStage, p.KnownCount, p.TotalWords, isFinalStageFailed, p.FinalCompletedCount);
 }
