@@ -39,7 +39,7 @@ public class RemindersController(AppDbContext db) : ControllerBase
         }
 
         // ── Return reminders within the grace window ──────────────────────────
-        var due = await db.SetProgress
+        var dueRaw = await db.SetProgress
             .Where(p => p.UserId == userId
                      && p.NextReviewAt != null
                      && p.NextReviewAt.Value.Date <= today
@@ -49,14 +49,26 @@ public class RemindersController(AppDbContext db) : ControllerBase
             .Where(p => p.Set.OwnerId == userId ||
                         db.UserSets.Any(us => us.UserId == userId && us.SetId == p.SetId))
             .OrderBy(p => p.NextReviewAt)
-            .Select(p => new ReminderDto(
+            .Select(p => new {
                 p.SetId,
                 p.Set.Title,
                 p.KnownCount,
                 p.TotalWords,
-                p.NextReviewAt!.Value,
-                p.ReviewStage))
+                p.FinalCompletedCount,
+                p.NextReviewAt,
+                p.ReviewStage
+            })
             .ToListAsync();
+
+        var due = dueRaw.Select(p => new ReminderDto(
+            p.SetId,
+            p.Title,
+            p.KnownCount,
+            p.ReviewStage == ReviewScheduler.FinalStage
+                ? Math.Max(0, p.TotalWords - p.FinalCompletedCount)
+                : p.TotalWords,
+            p.NextReviewAt!.Value,
+            p.ReviewStage)).ToList();
 
         return Ok(due);
     }
