@@ -1,73 +1,187 @@
 # Wörter — Vocabulary Learning App
 
-A full-stack vocabulary learning application with spaced repetition (SRS). Create word sets, study with flashcards and quizzes, track progress, and follow a smart review schedule that adapts to your pace.
+I built this app to learn German vocabulary while preparing to relocate to Germany. Existing flashcard tools didn't fit how I wanted to study, so I wrote my own — with a spaced repetition algorithm, a structured review schedule, and a quiz mode that actually tests whether you can recall the word from scratch, not just recognize it.
 
-**Stack:** React 18 + TypeScript + Tailwind CSS · ASP.NET Core 8 · PostgreSQL · Google OAuth
-
----
-
-## Features
-
-- **Word sets** — create, edit, import (term–definition pairs), make public or keep private
-- **Study modes** — flip-card flashcards, two-phase quiz (multiple choice → typed answer)
-- **Spaced repetition** — 5-stage SRS with smart scheduling; grace period for missed days
-- **Final stage** — stage 5 requires a perfect written test; tracks word-by-word completion
-- **Weekly plan** — calendar view of upcoming reviews; drag-and-drop to reschedule
-- **Activity charts** — daily word count for the current week and last 30 days
-- **Explore** — search and save public sets created by other users
-- **Dictionary** — search all words across all your sets; filter by completion status
-- **Folders** — organize sets into custom folders; support for both owned and saved sets
-- **Text-to-speech** — pronounce any word using the browser's Web Speech API
-- **Multilingual UI** — Russian, English, and German interfaces
-- **"Next set" button** — after finishing a session, jump directly to the next due set
+**Backend:** C# · ASP.NET Core 8 · Entity Framework Core 8 · PostgreSQL  
+**Frontend:** React 18 · TypeScript · Tailwind CSS  
+**Auth:** Google OAuth 2.0 → JWT  
+**Infra:** Docker Compose · Vercel · Render · Neon
 
 ---
 
-## Quick Start (Docker)
+## What it does
+
+- **Word sets** — create, edit, bulk-import (`term - definition` format), make public or private
+- **Two study modes** — flip-card flashcards and a two-phase quiz (multiple choice → typed answer)
+- **Spaced repetition** — custom 5-stage SRS; intervals calculated from the actual study date so a missed day shifts the schedule forward, not backwards
+- **Final stage** — stage 5 requires a perfect written test; each word is tracked individually so partial progress is saved between attempts
+- **Weekly plan** — calendar view of upcoming reviews with drag-and-drop rescheduling
+- **Activity charts** — daily word count bar charts (week and 30-day views)
+- **Explore** — search and save public sets from other users
+- **Dictionary** — search all your words across all sets; filter by completion
+- **Folders** — organize sets into named groups (works for both owned and saved sets)
+- **Text-to-speech** — pronounce words using the browser's Web Speech API with the set's BCP-47 language tag
+- **Multilingual UI** — Russian, English, German
+
+---
+
+## Backend highlights
+
+### REST API — 10 controllers, ~35 endpoints
+
+```
+POST   /api/auth/google          Google ID token → JWT
+GET    /api/sets                 All user's sets (owned + saved) with progress summary
+POST   /api/sets                 Create set
+GET    /api/sets/{id}            Set detail with words and SRS progress
+PUT    /api/sets/{id}            Update set
+DELETE /api/sets/{id}            Delete set
+POST   /api/sets/{id}/clone      Save a public set to your collection
+DELETE /api/sets/{id}/clone      Remove a saved set
+POST   /api/sets/{id}/words      Bulk add words
+PUT    /api/words/{id}           Update word
+DELETE /api/words/{id}           Delete word
+POST   /api/progress/{setId}     Record study session → updates SRS state
+GET    /api/progress/{setId}     Get progress + per-word stats
+GET    /api/progress/weekly      Words studied per day (Mon–Sun)
+GET    /api/progress/monthly     Words studied per day (last 30 days)
+GET    /api/progress/weakest-words  Ranked list of weakest words across sets
+GET    /api/plan/weekly          Review schedule for the week
+GET    /api/plan/monthly         Review schedule for 30 days
+PATCH  /api/plan/{setId}/reschedule  Move a review to a different day
+GET    /api/reminders            Sets due for review today
+GET    /api/folders              List user's folders
+POST   /api/folders              Create folder
+PUT    /api/folders/{id}         Rename folder
+DELETE /api/folders/{id}         Delete folder (sets keep their data)
+PATCH  /api/folders/{id}/sets/{setId}  Assign set to folder
+GET    /api/explore              Search public sets (paginated)
+GET    /api/dictionary           Search all words with filter
+```
+
+### Entity Framework Core 8 + PostgreSQL
+
+9 tables, 14 EF-generated migrations, applied automatically on startup.
+
+Key schema decisions:
+- `SetProgress(UserId, SetId)` — unique composite index; composite index on `(UserId, NextReviewAt)` for fast "what's due today" queries
+- `WordProgress.IsFinalCompleted` — tracks which words have passed the final written test
+- `SetStudyLog` — append-only audit log, one row per session
+- `UserSet.FolderId` — per-user folder assignment for saved (public) sets, separate from the owner's folder
+
+```csharp
+// Automatic migration on startup
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.Migrate();
+}
+```
+
+### Spaced repetition algorithm
+
+Custom SRS implemented in [`ReviewScheduler.cs`](backend/VocabApp.API/Services/ReviewScheduler.cs) — a pure static class with no database dependencies, making it fully unit-testable.
+
+```csharp
+public static readonly int[] Intervals = [1, 1, 2, 3, 7]; // days per stage
+
+public static bool RecordReview(SetProgress progress, int knownCount, int totalWords)
+{
+    // Only advance when the scheduled day has arrived
+    if (!progress.NextReviewAt.HasValue || progress.NextReviewAt.Value.Date > DateTime.UtcNow.Date)
+        return false;
+
+    // Final stage: perfect score required
+    if (progress.ReviewStage == FinalStage && knownCount < totalWords)
+        return false;
+
+    progress.ReviewStage = Math.Min(progress.ReviewStage + 1, Intervals.Length + 1);
+
+    // Relative to today — a missed day shifts the whole schedule forward
+    progress.NextReviewAt = progress.ReviewStage <= Intervals.Length
+        ? DateTime.UtcNow.Date.AddDays(Intervals[progress.ReviewStage - 1])
+        : null; // stage 6 = complete
+    return true;
+}
+```
+
+43 xUnit tests cover the full scheduling logic including grace period expiry, missed days, and final-stage edge cases.
+
+| Stage | Next review | Notes |
+|---|---|---|
+| 1 | +1 day | |
+| 2 | +1 day | |
+| 3 | +2 days | |
+| 4 | +3 days | |
+| 5 | — | Perfect score required; word-by-word completion tracked |
+| 6 | Complete | `NextReviewAt = null` |
+
+Grace period: if a review is missed by more than 3 days the cycle resets to stage 0. Final stage is exempt — it can be attempted any time.
+
+---
+
+## Quick start
 
 ```bash
 git clone <repo-url>
 cd vocab-app
+cp .env.example .env
+# Set GOOGLE_CLIENT_ID in .env (see Configuration below)
+
 docker compose up --build
 ```
 
-| Service   | URL                           |
-|-----------|-------------------------------|
-| Frontend  | http://localhost:5173          |
-| API       | http://localhost:5050          |
-| Swagger   | http://localhost:5050/swagger  |
-| Database  | localhost:5433 (postgres)      |
+| Service   | URL |
+|---|---|
+| Frontend  | http://localhost:5173 |
+| API       | http://localhost:5050 |
+| Swagger   | http://localhost:5050/swagger |
+| Database  | localhost:5433 |
 
-> Google OAuth requires a real Client ID — see [Configuration](#configuration).
+The frontend source is mounted as a volume — Vite hot-reloads on file changes without rebuilding the container.
 
 ---
 
-## Project Structure
+## Running tests
+
+```bash
+# Backend — 43 xUnit tests
+cd backend && dotnet test
+
+# Frontend — Vitest
+cd frontend && npm test
+```
+
+---
+
+## Project structure
 
 ```
 vocab-app/
 ├── backend/
 │   ├── VocabApp.API/
 │   │   ├── Controllers/     # 10 REST controllers
-│   │   ├── Data/            # EF Core DbContext + 14 migrations
-│   │   ├── DTOs/            # Request/response records
-│   │   ├── Models/          # 9 entity classes
-│   │   ├── Services/        # ReviewScheduler, AuthService, GeminiService
-│   │   ├── Extensions/      # ClaimsPrincipal helpers
+│   │   ├── Data/
+│   │   │   ├── AppDbContext.cs
+│   │   │   └── Migrations/  # 14 EF-generated migrations
+│   │   ├── DTOs/            # C# records for requests/responses
+│   │   ├── Models/          # 9 EF entity classes
+│   │   ├── Services/
+│   │   │   ├── ReviewScheduler.cs   # SRS algorithm
+│   │   │   ├── AuthService.cs       # Google OAuth + JWT
+│   │   │   └── GeminiService.cs     # Groq API client
 │   │   └── Program.cs
-│   ├── VocabApp.Tests/      # 43 xUnit tests (SRS logic)
+│   ├── VocabApp.Tests/      # xUnit — ReviewScheduler tests
 │   └── Dockerfile
 ├── frontend/
 │   ├── src/
-│   │   ├── api/             # 9 Axios API modules
-│   │   ├── components/      # Reusable UI components
-│   │   ├── context/         # Auth, Lang (i18n), Toast
+│   │   ├── api/             # Typed Axios API modules
+│   │   ├── components/      # TestRunner, QuizRunner, NextSetButton, …
+│   │   ├── context/         # Auth, i18n, Toast
 │   │   ├── pages/           # 14 route-level pages
-│   │   ├── utils/           # SRS constants, quiz engine, speech, import parser
-│   │   └── i18n/            # Translations (ru / en / de)
-│   ├── Dockerfile           # Dev server
-│   ├── Dockerfile.prod      # nginx production build
-│   └── vercel.json
+│   │   └── utils/           # testEngine, importParser, speech, srs
+│   ├── Dockerfile           # Dev (Vite)
+│   └── Dockerfile.prod      # Production (nginx)
 ├── docker-compose.yml       # Local development
 ├── docker-compose.prod.yml  # Self-hosted production
 └── .env.example
@@ -77,126 +191,35 @@ vocab-app/
 
 ## Configuration
 
-### Required environment variables
+Copy `.env.example` to `.env` and fill in:
+
+| Variable | Description |
+|---|---|
+| `GOOGLE_CLIENT_ID` | Google OAuth 2.0 Client ID — [create one here](https://console.cloud.google.com) |
+| `JWT_SECRET` | Random string ≥ 32 chars — `openssl rand -base64 32` |
+
+Additional backend variables (Render / production):
 
 | Variable | Description |
 |---|---|
 | `ConnectionStrings__Default` | PostgreSQL connection string |
-| `Jwt__Secret` | Signing key, ≥ 32 characters (`openssl rand -base64 32`) |
-| `Jwt__Issuer` | Token issuer — any string, e.g. `worter-app` |
-| `Jwt__ExpiresDays` | Token lifetime in days (default `7`) |
-| `Frontend__Url` | Frontend origin for CORS (e.g. `https://yourapp.vercel.app`) |
-| `Google__ClientId` | Google OAuth 2.0 Client ID |
-| `Groq__ApiKey` | Groq API key for example-sentence generation (optional) |
-
-Frontend (`.env.local`):
-
-| Variable | Description |
-|---|---|
-| `VITE_API_URL` | Backend base URL |
-| `VITE_GOOGLE_CLIENT_ID` | Same Google Client ID as above |
-
-See [.env.example](.env.example) for a full template.
+| `Frontend__Url` | Frontend origin for CORS |
+| `ASPNETCORE_ENVIRONMENT` | `Production` |
+| `Groq__ApiKey` | Optional — Groq API key for example-sentence generation |
 
 ---
 
 ## Deployment
 
-### Vercel + Render + Neon (recommended free tier)
+Full guide: [DEPLOY.md](DEPLOY.md)
 
-**1. Database — Neon**
-
-1. Create a project at [neon.tech](https://neon.tech)
-2. Copy the connection string (format: `Host=ep-xxx...;Database=vocab;Username=...;Password=...;SSL Mode=Require;Trust Server Certificate=true`)
-
-**2. Backend — Render**
-
-1. New → **Web Service** → connect your repository
-2. Set **Root Directory** to `backend`, **Environment** to `Docker`
-3. Add environment variables:
-
-| Variable | Value |
-|---|---|
-| `ConnectionStrings__Default` | Neon connection string |
-| `Jwt__Secret` | `openssl rand -base64 32` |
-| `Jwt__Issuer` | `worter-app` |
-| `Jwt__ExpiresDays` | `7` |
-| `Frontend__Url` | Your Vercel URL (fill in after step 3) |
-| `ASPNETCORE_ENVIRONMENT` | `Production` |
-| `ASPNETCORE_URLS` | `http://+:8080` |
-| `Google__ClientId` | Your Google Client ID |
-| `Groq__ApiKey` | Your Groq key (optional) |
-
-4. Deploy → copy the service URL (e.g. `https://worter-api.onrender.com`)
-
-**3. Frontend — Vercel**
-
-1. New Project → import your repository
-2. Set **Root Directory** to `frontend`, **Framework** to Vite
-3. Add environment variable `VITE_API_URL` = Render URL from step 2
-4. Deploy
-
-> After deploying the frontend, go back to Render and update `Frontend__Url` to your Vercel URL.
+**Free tier:** Vercel (frontend) + Render (backend) + Neon (PostgreSQL)  
+**Self-hosted:** `docker compose -f docker-compose.prod.yml up -d --build`
 
 ---
 
-### Self-hosted (Docker Compose)
+## Docs
 
-```bash
-cp .env.example .env
-# Edit .env with real values
-
-docker compose -f docker-compose.prod.yml up -d --build
-```
-
-Frontend is served on port `80` via nginx, API on `8080`.
-
----
-
-## Running Tests
-
-**Backend (xUnit — 43 SRS tests):**
-
-```bash
-cd backend
-dotnet test
-```
-
-**Frontend (Vitest):**
-
-```bash
-cd frontend
-npm test
-```
-
----
-
-## Architecture
-
-See [ARCHITECTURE.md](ARCHITECTURE.md) for a full technical overview.
-
-## Database Schema
-
-See [DATABASE.md](DATABASE.md) for table definitions, relationships, and indexes.
-
----
-
-## SRS Algorithm
-
-The app uses a 5-stage spaced repetition system. Intervals are calculated relative to the **actual study date**, so a missed day shifts the schedule forward without breaking the sequence.
-
-| Stage completed | Next review |
-|---|---|
-| 1 | +1 day |
-| 2 | +1 day |
-| 3 | +2 days |
-| 4 | +3 days |
-| 5 (Final) | Perfect score required |
-| 6 | Complete — no more reviews |
-
-**Grace period:** reviews missed by more than 3 days reset to stage 0 (final stage is exempt).
-
-**Final stage:** the user must write all words correctly in a single session. Each correct word is marked individually; partial progress is saved between attempts.
-
-Implementation: [`backend/VocabApp.API/Services/ReviewScheduler.cs`](backend/VocabApp.API/Services/ReviewScheduler.cs)
-Tests: [`backend/VocabApp.Tests/ReviewSchedulerTests.cs`](backend/VocabApp.Tests/ReviewSchedulerTests.cs)
+- [ARCHITECTURE.md](ARCHITECTURE.md) — backend/frontend architecture, auth flow, data flow
+- [DATABASE.md](DATABASE.md) — full schema: tables, columns, constraints, indexes, migrations
+- [DEPLOY.md](DEPLOY.md) — deployment guide for all three options
