@@ -22,13 +22,13 @@ services:
         condition: service_healthy
     environment:
       ConnectionStrings__Default: Host=postgres;Database=vocab;Username=vocab;Password=vocab
-      Jwt__Secret: super-secret-key-change-in-production-!!
+      Jwt__Secret: ${JWT_SECRET:-dev-secret-change-before-use-min-32-chars!!}
       Jwt__Issuer: vocab-app
       Jwt__ExpiresDays: "7"
       Frontend__Url: http://localhost:5173
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
-      Google__ClientId: 766898105584-ai5qblsd4lqgteemj1qa4270du3n74mr.apps.googleusercontent.com
+      Google__ClientId: ${GOOGLE_CLIENT_ID}
     ports:
       - "5050:8080"
 
@@ -38,7 +38,7 @@ services:
       - api
     environment:
       VITE_API_URL: http://localhost:5050
-      VITE_GOOGLE_CLIENT_ID: 766898105584-ai5qblsd4lqgteemj1qa4270du3n74mr.apps.googleusercontent.com
+      VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
     ports:
       - "5173:5173"
     volumes:
