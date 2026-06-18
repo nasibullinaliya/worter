@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { getSet, type SetDetailDto } from '../api/sets'
+import { getSet, getReminders, type SetDetailDto } from '../api/sets'
 import { recordSession } from '../api/progress'
 import { TestRunner } from '../components/TestRunner'
 import { Layout } from '../components/Layout'
+import type { NextSetInfo } from '../components/NextSetButton'
 import type { TestWord } from '../utils/testEngine'
 
 const MIN_WORDS = 2
@@ -12,6 +13,7 @@ export default function Test() {
   const { id } = useParams<{ id: string }>()
   const [set, setSet] = useState<SetDetailDto | null>(null)
   const [loading, setLoading] = useState(true)
+  const [nextSet, setNextSet] = useState<NextSetInfo | undefined>()
 
   useEffect(() => {
     if (!id) return
@@ -47,7 +49,13 @@ export default function Test() {
 
   const handleFinish = async (wordResults: { wordId: string; errorCount: number }[]) => {
     try {
-      return await recordSession(id!, wordResults)
+      const result = await recordSession(id!, wordResults)
+      try {
+        const reminders = await getReminders()
+        const first = reminders[0]
+        if (first) setNextSet({ setId: first.setId, title: first.title, reviewStage: first.reviewStage })
+      } catch { /* non-critical */ }
+      return result
     } catch {
       return null
     }
@@ -62,6 +70,8 @@ export default function Test() {
         onFinish={handleFinish}
         lang={set.language}
         defaultDirection="def-to-word"
+        nextSet={nextSet}
+        defaultMode="study"
       />
     </Layout>
   )

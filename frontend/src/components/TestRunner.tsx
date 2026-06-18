@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ProgressBar } from './ProgressBar'
 import { SpeakButton } from './SpeakButton'
+import { NextSetButton, type NextSetInfo } from './NextSetButton'
 import { useLang } from '../context/LangContext'
 import {
   type Direction,
@@ -34,6 +35,8 @@ interface Props {
   isFinalStage?: boolean
   onBack?: () => void
   lang?: string
+  nextSet?: NextSetInfo
+  defaultMode?: 'study' | 'test'
 }
 
 type Screen = 'settings' | 'final-banner' | 'running' | 'stage-review' | 'done'
@@ -48,6 +51,8 @@ export function TestRunner({
   isFinalStage = false,
   onBack,
   lang,
+  nextSet,
+  defaultMode = 'study',
 }: Props) {
   const { t, wl, dateLocale } = useLang()
 
@@ -487,15 +492,18 @@ export function TestRunner({
           </div>
           <h2 className="mb-2 text-2xl font-bold text-gray-900">{t('test.setCompleted')}</h2>
           <p className="mb-8 text-gray-500">{t('test.setCompletedHint')}</p>
-          {onBack ? (
-            <button onClick={onBack} className="rounded-lg bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-opacity">
-              {backLabel}
-            </button>
-          ) : backHref ? (
-            <Link to={backHref} className="inline-block rounded-lg bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-opacity">
-              {backLabel}
-            </Link>
-          ) : null}
+          <div className="flex flex-col items-center gap-3">
+            {nextSet && <NextSetButton nextSet={nextSet} defaultMode={defaultMode} />}
+            {onBack ? (
+              <button onClick={onBack} className="rounded-lg border border-gray-300 px-5 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                {backLabel}
+              </button>
+            ) : backHref ? (
+              <Link to={backHref} className="rounded-lg border border-gray-300 px-5 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                {backLabel}
+              </Link>
+            ) : null}
+          </div>
         </div>
       )
     }
@@ -571,28 +579,31 @@ export function TestRunner({
           </p>
         )}
 
-        <div className="flex justify-center gap-3">
-          <button
-            onClick={start}
-            className="rounded-lg bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-5 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
-          >
-            {t('test.retake')}
-          </button>
-          {onBack ? (
+        <div className="flex flex-col items-center gap-3">
+          {nextSet && <NextSetButton nextSet={nextSet} defaultMode={defaultMode} />}
+          <div className="flex justify-center gap-3">
             <button
-              onClick={onBack}
+              onClick={start}
               className="rounded-lg border border-gray-300 px-5 py-2 text-sm text-gray-700 hover:bg-gray-50"
             >
-              {backLabel}
+              {t('test.retake')}
             </button>
-          ) : backHref ? (
-            <Link
-              to={backHref}
-              className="rounded-lg border border-gray-300 px-5 py-2 text-sm text-gray-700 hover:bg-gray-50"
-            >
-              {backLabel}
-            </Link>
-          ) : null}
+            {onBack ? (
+              <button
+                onClick={onBack}
+                className="rounded-lg border border-gray-300 px-5 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                {backLabel}
+              </button>
+            ) : backHref ? (
+              <Link
+                to={backHref}
+                className="rounded-lg border border-gray-300 px-5 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                {backLabel}
+              </Link>
+            ) : null}
+          </div>
         </div>
       </div>
     )

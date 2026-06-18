@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { TestRunner } from './TestRunner'
+import { NextSetButton, type NextSetInfo } from './NextSetButton'
 import { useLang } from '../context/LangContext'
 import {
   checkAnswer,
@@ -31,6 +32,8 @@ interface Props {
   /** Final stage: async handler that records the session and returns the result */
   isFinalStage?: boolean
   onFinalFinish?: (knownWordIds: string[], unknownWordIds: string[]) => Promise<FinishResult | null>
+  nextSet?: NextSetInfo
+  defaultSessionMode?: 'study' | 'test'
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -47,6 +50,8 @@ export function QuizRunner({
   onComplete,
   isFinalStage = false,
   onFinalFinish,
+  nextSet,
+  defaultSessionMode = 'test',
 }: Props) {
   const { t, wl } = useLang()
 
@@ -198,12 +203,15 @@ export function QuizRunner({
         </div>
         <h2 className="mb-2 text-2xl font-bold text-gray-900">{t('test.setCompleted')}</h2>
         <p className="mb-8 text-gray-500">{t('test.setCompletedHint')}</p>
-        <button
-          onClick={onBack}
-          className="rounded-lg bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
-        >
-          {backLabel ?? '←'}
-        </button>
+        <div className="flex flex-col items-center gap-3">
+          {nextSet && <NextSetButton nextSet={nextSet} defaultMode={defaultSessionMode} />}
+          <button
+            onClick={onBack}
+            className="rounded-lg border border-gray-300 px-5 py-2 text-sm text-gray-700 hover:bg-gray-50"
+          >
+            {backLabel ?? '←'}
+          </button>
+        </div>
       </div>
     )
   }
@@ -520,6 +528,11 @@ export function QuizRunner({
           {t('quiz.retake')}
         </button>
       </div>
+      {nextSet && (
+        <div className="mt-4 flex justify-center">
+          <NextSetButton nextSet={nextSet} defaultMode={defaultSessionMode} />
+        </div>
+      )}
     </div>
   )
 }

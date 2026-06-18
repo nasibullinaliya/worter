@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { getSet, type SetDetailDto } from '../api/sets'
+import { getSet, getReminders, type SetDetailDto } from '../api/sets'
 import { recordSession } from '../api/progress'
 import { QuizRunner } from '../components/QuizRunner'
 import { Layout } from '../components/Layout'
 import { useLang } from '../context/LangContext'
+import type { NextSetInfo } from '../components/NextSetButton'
 import type { TestWord } from '../utils/testEngine'
 
 function toTestWords(set: SetDetailDto, wordsSubset: SetDetailDto['words']): TestWord[] {
@@ -25,6 +26,7 @@ export default function Quiz() {
 
   const [set, setSet] = useState<SetDetailDto | null>(null)
   const [loading, setLoading] = useState(true)
+  const [nextSet, setNextSet] = useState<NextSetInfo | undefined>()
   // For final stage: only incomplete words; updated after each partial completion
   const [finalWords, setFinalWords] = useState<TestWord[]>([])
 
@@ -64,13 +66,21 @@ export default function Quiz() {
 
   const allWords = toTestWords(set, set.words)
 
-  // Regular test: fire-and-forget session recording
+  const fetchNextSet = async () => {
+    try {
+      const reminders = await getReminders()
+      const first = reminders[0]
+      if (first) setNextSet({ setId: first.setId, title: first.title, reviewStage: first.reviewStage })
+    } catch { /* non-critical */ }
+  }
+
+  // Regular test: record session then fetch next set from plan
   const handleComplete = (knownWordIds: string[], unknownWordIds: string[]) => {
     const wordResults = [
       ...knownWordIds.map((wordId) => ({ wordId, errorCount: 0 })),
       ...unknownWordIds.map((wordId) => ({ wordId, errorCount: 1 })),
     ]
-    if (id) recordSession(id, wordResults).catch(() => {})
+    if (id) recordSession(id, wordResults).then(fetchNextSet).catch(() => {})
   }
 
   // Final stage: record session with isFinalStage=true, then refresh incomplete words
@@ -88,6 +98,7 @@ export default function Quiz() {
         const remaining = updatedSet.words.filter((w) => !w.isFinalCompleted)
         setFinalWords(toTestWords(updatedSet, remaining))
       }
+      await fetchNextSet()
       return result
     } catch {
       return null
@@ -103,6 +114,8 @@ export default function Quiz() {
         onComplete={isFinalStage ? undefined : handleComplete}
         isFinalStage={isFinalStage}
         onFinalFinish={isFinalStage ? handleFinalFinish : undefined}
+        nextSet={nextSet}
+        defaultSessionMode="test"
       />
     </Layout>
   )

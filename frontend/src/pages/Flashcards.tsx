@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { getSet, type SetDetailDto, type WordDto } from '../api/sets'
+import { getSet, getReminders, type SetDetailDto, type WordDto } from '../api/sets'
 import { recordSession, type SetProgressDto } from '../api/progress'
 import { ProgressBar } from '../components/ProgressBar'
 import { SpeakButton } from '../components/SpeakButton'
+import { NextSetButton, type NextSetInfo } from '../components/NextSetButton'
 import { Layout } from '../components/Layout'
 import { useLang } from '../context/LangContext'
 import { speak, stopSpeech } from '../utils/speech'
@@ -31,6 +32,7 @@ export default function Flashcards() {
   const [done, setDone] = useState(false)
   const [result, setResult] = useState<SetProgressDto | null>(null)
   const [saving, setSaving] = useState(false)
+  const [nextSet, setNextSet] = useState<NextSetInfo | undefined>()
   const [pressed, setPressed] = useState<'known' | 'unknown' | null>(null)
   const [autoPlay, setAutoPlay] = useState(() => localStorage.getItem(AUTOPLAY_KEY) === 'true')
   // 'term' = word on front (default), 'definition' = translation on front
@@ -118,6 +120,11 @@ export default function Flashcards() {
         ]
         const res = await recordSession(id!, wordResults)
         setResult(res)
+        try {
+          const reminders = await getReminders()
+          const first = reminders[0]
+          if (first) setNextSet({ setId: first.setId, title: first.title, reviewStage: first.reviewStage })
+        } catch { /* non-critical */ }
       } catch { /* ignore */ }
       finally { setSaving(false) }
       setDone(true)
@@ -192,19 +199,22 @@ export default function Flashcards() {
             </p>
           )}
 
-          <div className="flex justify-center gap-3">
-            <button
-              onClick={restart}
-              className="rounded-full bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] px-5 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity transition-colors"
-            >
-              {t('fc.restart')}
-            </button>
-            <Link
-              to={`/sets/${id}`}
-              className="rounded-full border border-gray-200 px-5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
-            >
-              {t('common.backToSet')}
-            </Link>
+          <div className="flex flex-col items-center gap-3">
+            {nextSet && <NextSetButton nextSet={nextSet} defaultMode="study" />}
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={restart}
+                className="rounded-full border border-gray-200 px-5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+              >
+                {t('fc.restart')}
+              </button>
+              <Link
+                to={`/sets/${id}`}
+                className="rounded-full border border-gray-200 px-5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+              >
+                {t('common.backToSet')}
+              </Link>
+            </div>
           </div>
         </div>
       </Layout>
