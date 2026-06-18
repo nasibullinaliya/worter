@@ -57,7 +57,7 @@ builder.Services.AddSwaggerGen(c =>
         Scheme = "bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Введите JWT токен"
+        Description = "Enter your JWT token"
     });
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
@@ -71,7 +71,7 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// CORS для фронтенда
+// CORS
 builder.Services.AddCors(opt =>
     opt.AddDefaultPolicy(p =>
         p.WithOrigins(
@@ -88,14 +88,14 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
 });
 
-// Применяем миграции автоматически при старте
+// Apply EF migrations automatically on startup
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
 }
 
-// Swagger только в Development
+// Swagger in Development only
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

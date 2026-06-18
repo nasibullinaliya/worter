@@ -21,7 +21,7 @@ public class ExploreController(AppDbContext db) : ControllerBase
         var userId = User.GetUserId();
         if (page < 1) page = 1;
 
-        // Исключаем свои наборы и уже сохранённые
+        // Exclude sets the user owns or has already saved
         var savedSetIds = await db.UserSets
             .Where(us => us.UserId == userId)
             .Select(us => us.SetId)

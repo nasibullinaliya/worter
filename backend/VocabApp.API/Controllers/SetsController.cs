@@ -188,7 +188,7 @@ public class SetsController(AppDbContext db) : ControllerBase
         return NoContent();
     }
 
-    // GET /api/sets/all-words — все слова из всех наборов пользователя (для теста по всем наборам)
+    // GET /api/sets/all-words — all words from all user's sets (owned + saved)
     [HttpGet("all-words")]
     public async Task<IActionResult> GetAllWords()
     {
@@ -207,7 +207,7 @@ public class SetsController(AppDbContext db) : ControllerBase
         return Ok(ownedWords.Concat(savedWords));
     }
 
-    // POST /api/sets/{id}/clone — добавить чужой набор к себе
+    // POST /api/sets/{id}/clone — save a public set to user's collection
     [HttpPost("{id:guid}/clone")]
     public async Task<IActionResult> Clone(Guid id)
     {
@@ -268,7 +268,7 @@ public class SetsController(AppDbContext db) : ControllerBase
         return Ok(new { id = copy.Id });
     }
 
-    // DELETE /api/sets/{id}/clone — убрать чужой набор из своих
+    // DELETE /api/sets/{id}/clone — remove a saved set from user's collection
     [HttpDelete("{id:guid}/clone")]
     public async Task<IActionResult> Uncollect(Guid id)
     {

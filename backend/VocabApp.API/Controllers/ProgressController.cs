@@ -337,7 +337,7 @@ public class ProgressController(AppDbContext db) : ControllerBase
         return Ok(ranked);
     }
 
-    // GET /api/progress/weekly — слов пройдено за каждый день текущей недели (Пн–Вс)
+    // GET /api/progress/weekly — words studied per day for the current week (Mon–Sun)
     [HttpGet("weekly")]
     public async Task<IActionResult> GetWeeklyProgress()
     {
@@ -363,7 +363,7 @@ public class ProgressController(AppDbContext db) : ControllerBase
         return Ok(result);
     }
 
-    // GET /api/progress/monthly — последние 30 дней включая сегодня
+    // GET /api/progress/monthly — words studied per day for the last 30 days
     [HttpGet("monthly")]
     public async Task<IActionResult> GetMonthlyProgress()
     {

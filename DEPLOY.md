@@ -1,136 +1,109 @@
-# План деплоя — Wörter
+# Deployment Guide
 
-## Стек
+## Option 1 — Vercel + Render + Neon (recommended free tier)
 
-| Часть | Сервис | Tier |
-|-------|--------|------|
-| Фронтенд | Vercel | Free |
-| Бэкенд | Render | Free |
-| База данных | Neon | Free |
+### 1. Database — Neon
 
----
-
-## Шаг 1 — GitHub
-
-1. Создать репозиторий на [github.com/new](https://github.com/new) (без README и .gitignore)
-2. Добавить SSH-ключ в [github.com/settings/keys](https://github.com/settings/keys) если не добавлен:
-   ```bash
-   cat ~/.ssh/id_ed25519.pub
+1. Create a project at [neon.tech](https://neon.tech)
+2. Copy the connection string:
    ```
-3. Запушить код:
-   ```bash
-   git remote add origin git@github.com:ВАШ_НИК/worter.git
-   git branch -M main
-   git push -u origin main
+   Host=ep-xxx.eu-central-1.aws.neon.tech;Database=vocab;Username=vocab;Password=xxx;SSL Mode=Require;Trust Server Certificate=true
    ```
 
----
+### 2. Backend — Render
 
-## Шаг 2 — База данных (Neon)
+1. **New → Web Service** → connect your repository
+2. Set **Root Directory** to `backend`, **Environment** to `Docker`
+3. Add environment variables:
 
-1. [neon.tech](https://neon.tech) → Sign up (через GitHub)
-2. Create project → Name: `worter`, Region: EU Central
-3. Скопировать строку подключения: Dashboard → **Connection string** → тип **ADO.NET**
-4. К строке добавить `;Trust Server Certificate=true` в конец
-
-Итоговый вид:
-```
-Host=ep-xxx.eu-central-1.aws.neon.tech;Database=neondb;Username=neondb_owner;Password=xxx;SSL Mode=VerifyFull;Trust Server Certificate=true
-```
-
-> Миграции применяются автоматически при старте API (`db.Database.Migrate()` в `Program.cs`)
-
----
-
-## Шаг 3 — Бэкенд (Render)
-
-1. [render.com](https://render.com) → Sign in with GitHub
-2. **New +** → **Web Service** → подключить репо `worter`
-3. Настройки:
-   - **Root Directory:** `backend`
-   - **Environment:** Docker
-   - **Region:** Frankfurt (EU)
-   - **Instance Type:** Free
-4. Добавить переменные окружения:
-
-| Key | Value |
-|-----|-------|
-| `ConnectionStrings__Default` | строка подключения от Neon |
-| `Jwt__Secret` | случайная строка ≥ 32 символа: `openssl rand -base64 32` |
+| Variable | Value |
+|---|---|
+| `ConnectionStrings__Default` | Neon connection string |
+| `Jwt__Secret` | `openssl rand -base64 32` (≥ 32 chars) |
 | `Jwt__Issuer` | `worter-app` |
 | `Jwt__ExpiresDays` | `7` |
+| `Frontend__Url` | Your Vercel URL (fill in after step 3) |
 | `ASPNETCORE_ENVIRONMENT` | `Production` |
 | `ASPNETCORE_URLS` | `http://+:8080` |
-| `Frontend__Url` | URL Vercel-проекта (заполнить после шага 4) |
+| `Google__ClientId` | Your Google OAuth Client ID |
+| `Groq__ApiKey` | Groq API key (optional — for example sentence generation) |
 
-5. **Create Web Service** → дождаться деплоя (~5 мин)
-6. Скопировать URL: `https://worter-api.onrender.com`
+4. Deploy → note the service URL (e.g. `https://worter-api.onrender.com`)
 
----
+### 3. Frontend — Vercel
 
-## Шаг 4 — Фронтенд (Vercel)
+1. **New Project** → import your repository
+2. **Root Directory:** `frontend` · **Framework:** Vite · **Build Command:** `npm run build` · **Output Dir:** `dist`
+3. Add environment variable: `VITE_API_URL` = Render URL from step 2
+4. Deploy
 
-### Через CLI (рекомендуется)
+> After the frontend is live, go back to Render and update `Frontend__Url` to your Vercel URL.
 
-```bash
-cd frontend
-npx vercel login        # войти через браузер
-npx vercel --yes \
-  -e VITE_API_URL=https://worter-api.onrender.com \
-  --prod
-```
+### 4. Google OAuth Setup
 
-### Через веб-интерфейс
-
-1. [vercel.com](https://vercel.com) → Sign in with GitHub
-2. **New Project** → импортировать репо `worter`
-3. Настройки:
-   - **Root Directory:** `frontend`
-   - **Framework Preset:** Vite
-4. Переменная окружения: `VITE_API_URL` = URL Render-бэкенда
-5. **Deploy**
+1. Go to [Google Cloud Console](https://console.cloud.google.com) → APIs & Services → Credentials
+2. Create an **OAuth 2.0 Client ID** (Web application)
+3. Add **Authorized JavaScript origins**: your Vercel URL + `http://localhost:5173`
+4. Add **Authorized redirect URIs**: same origins
+5. Copy the Client ID to both Render (`Google__ClientId`) and Vercel (`VITE_GOOGLE_CLIENT_ID`)
 
 ---
 
-## Шаг 5 — Связать бэкенд с фронтендом
-
-После деплоя фронта вернуться в Render → Environment → обновить:
-```
-Frontend__Url = https://worter.vercel.app   # точный URL из Vercel
-```
-→ **Manual Deploy** → редеплоить.
-
----
-
-## Обновление после изменений в коде
-
-```bash
-git add -A
-git commit -m "описание изменений"
-git push origin main
-```
-
-- **Render** и **Vercel** автоматически подхватят push и передеплоят.
-
----
-
-## Известные ограничения Free-tier
-
-| Ограничение | Описание |
-|-------------|----------|
-| Render засыпает | Бэкенд засыпает после 15 мин простоя, первый запрос ждёт ~30 сек |
-| Neon | 0.5 ГБ хранилища, 1 проект |
-| Vercel | Лимит 100 ГБ трафика/мес |
-
----
-
-## Self-hosted альтернатива (docker-compose.prod.yml)
+## Option 2 — Self-hosted (Docker Compose)
 
 ```bash
 cp .env.example .env
-# заполнить .env
+# Edit .env — set POSTGRES_PASSWORD, JWT_SECRET, FRONTEND_URL, API_URL, GOOGLE_CLIENT_ID
 
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-Фронт на порту `80`, API на `8080`.
+Frontend on port `80`, API on `8080`.
+
+Required `.env` variables:
+
+```bash
+POSTGRES_DB=vocab
+POSTGRES_USER=vocab
+POSTGRES_PASSWORD=<strong password>
+JWT_SECRET=<openssl rand -base64 32>
+FRONTEND_URL=https://your-domain.com
+API_URL=https://your-domain.com/api   # or http://localhost:8080
+GOOGLE_CLIENT_ID=<your client id>
+```
+
+---
+
+## Local Development
+
+```bash
+docker compose up --build
+```
+
+| Service  | URL |
+|---|---|
+| Frontend | http://localhost:5173 |
+| API      | http://localhost:5050 |
+| Swagger  | http://localhost:5050/swagger |
+| Database | localhost:5433 |
+
+The `./frontend/src` directory is mounted as a volume — Vite hot-reloads on file changes.
+
+To rebuild after backend changes:
+
+```bash
+docker compose build api && docker compose up -d api
+```
+
+---
+
+## EF Migrations
+
+Migrations run automatically on API startup (`db.Database.Migrate()`).
+
+To create a new migration during development:
+
+```bash
+cd backend
+dotnet ef migrations add <MigrationName> --project VocabApp.API
+```

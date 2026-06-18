@@ -12,7 +12,7 @@ namespace VocabApp.API.Controllers;
 [Authorize]
 public class WordsController(AppDbContext db) : ControllerBase
 {
-    // POST /api/sets/{setId}/words — одно или массив слов
+    // POST /api/sets/{setId}/words — add one or multiple words
     [HttpPost("api/sets/{setId:guid}/words")]
     public async Task<IActionResult> AddWords(Guid setId, CreateWordsRequest req)
     {
