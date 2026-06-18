@@ -9,6 +9,14 @@ I built this app to learn German vocabulary while preparing to relocate to Germa
 
 ---
 
+## Screenshots
+
+| My Sets | Weekly Plan |
+|---|---|
+| ![My Sets](docs/screenshots/sets.png) | ![Plan](docs/screenshots/plan.png) |
+
+---
+
 ## What it does
 
 - **Word sets** — create, edit, bulk-import (`term - definition` format), make public or private
