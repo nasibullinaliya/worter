@@ -69,7 +69,7 @@ export default function Quiz() {
   const fetchNextSet = async () => {
     try {
       const reminders = await getReminders()
-      const first = reminders[0]
+      const first = reminders.find(r => r.setId !== id)
       if (first) setNextSet({ setId: first.setId, title: first.title, reviewStage: first.reviewStage })
     } catch { /* non-critical */ }
   }
